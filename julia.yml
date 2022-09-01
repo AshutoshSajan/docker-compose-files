@@ -1,0 +1,8 @@
+version: '3.3'
+services:
+  julia-docker:
+    image: julia
+    ports:
+      - '7777:7777'
+    volumes:
+      - './:/opt/julia'

@@ -1,0 +1,26 @@
+version: '3.3'
+
+services:
+  postgresql-db:
+    image: postgres:14.1
+    container_name: psql
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    ports:
+      - '5432:5432'
+    networks:
+      - turreta_network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+networks:
+  turreta_network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+# sudo docker exec -it 3e86bb8cabd4 bash
+# psql -U admin -d postgress
