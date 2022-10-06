@@ -3,6 +3,7 @@ version: '2'
 services:
   rabbitmq:
     image: docker.io/bitnami/rabbitmq:3.10
+    # restart: always
     ports:
       - '4369:4369'
       - '5551:5551'
