@@ -1,9 +1,18 @@
-version: '3.1'
 services:
   webserver:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: webserver
     restart: unless-stopped
     ports:
-      - '80:80'
-      - '443:443'
+      - '${NGINX_HTTP_PORT:-80}:80'
+      - '${NGINX_HTTPS_PORT:-443}:443'
+    # Uncomment to serve local content / custom config:
+    # volumes:
+    #   - ./nginx/html:/usr/share/nginx/html:ro
+    #   - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost/ | grep -q .']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,27 @@
+services:
+  rabbitmq:
+    image: docker.io/bitnami/rabbitmq:3.13
+    restart: unless-stopped
+    ports:
+      - '${RABBITMQ_AMQP_PORT:-5672}:5672'
+      - '${RABBITMQ_MGMT_PORT:-15672}:15672'
+      # Clustering / distribution (uncomment if clustering):
+      # - '4369:4369'
+      # - '25672:25672'
+    environment:
+      - RABBITMQ_USERNAME=${RABBITMQ_USER:-user}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-changeme}
+      - RABBITMQ_ERL_COOKIE=${RABBITMQ_ERL_COOKIE:-changeme-cookie}
+      - RABBITMQ_LOGS=-
+    volumes:
+      - 'rabbitmq_data:/bitnami/rabbitmq/mnesia'
+    healthcheck:
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  rabbitmq_data:
+    driver: local

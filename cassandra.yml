@@ -1,89 +1,87 @@
-version: '2.1'
-
+# Minimal working Cassandra for local dev (replaces the old broken file that
+# referenced missing build contexts like ./cassandra, ./logspout, ./pickle-*).
+# Full observability stack (Reaper/Prometheus/Grafana) is available via profiles.
 services:
   cassandra:
-    build: cassandra
-    env_file:
-      - cassandra/cassandra.env
-#    ports:
-#      - "7199:7199" # JMX
-#      - "7000:7000" # cluster communication
-#      - "7001:7001" # cluster communication (SSL)
-#      - "9042:9042" # native protocol clients
-#      - "9160:9160" # thrift clients
+    image: cassandra:4.1
+    container_name: cassandra
+    restart: unless-stopped
+    environment:
+      - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER:-local-cluster}
+      - CASSANDRA_DC=${CASSANDRA_DC:-datacenter1}
+      - CASSANDRA_RACK=${CASSANDRA_RACK:-rack1}
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    ports:
+      - '${CASSANDRA_PORT:-9042}:9042'
+      # - "7199:7199" # JMX
+      # - "7000:7000" # intra-node
+      # - "7001:7001" # intra-node SSL
+      # - "9160:9160" # thrift
     volumes:
-      - ./cassandra/config/collectd.cassandra.conf:/etc/collectd/collectd.conf
-#      - ./cassandra/config/graphite.cassandra.yaml:/etc/cassandra/graphite.yaml
-#      - ./cassandra/config/filebeat.yml:/etc/filebeat/filebeat.yml
-      - ./cassandra/config/prometheus.yml:/prometheus/prometheus.yml
-      - ./data/cassandra:/var/lib/cassandra
+      - cassandra-data:/var/lib/cassandra
+    healthcheck:
+      test: ['CMD-SHELL', 'nodetool status | grep -q UN']
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
 
   cqlsh:
-    image: cassandra:3.11
+    image: cassandra:4.1
+    profiles: ['tools']
     entrypoint: cqlsh cassandra
+    depends_on:
+      cassandra:
+        condition: service_healthy
     volumes:
-      - ./cassandra/schema.cql:/schema.cql
+      - ./cassandra-seeds:/seeds:ro
 
   nodetool:
-    image: cassandra:3.11
-    entrypoint: nodetool -h cassandra -u cassandraUser -pw cassandraPass
-    command: help
+    image: cassandra:4.1
+    profiles: ['tools']
+    entrypoint: ['nodetool', '-h', 'cassandra']
+    command: ['status']
+    depends_on:
+      cassandra:
+        condition: service_healthy
 
+  # Optional repair + metrics (modern versions, behind profiles):
+  #   docker compose -f cassandra.yml --profile observability up -d
   cassandra-reaper:
-    image: thelastpickle/cassandra-reaper:ab0fff2
-    env_file:
-      - cassandra-reaper/cassandra-reaper.env
-    links:
-      - cassandra:cassandra
+    image: thelastpickle/cassandra-reaper:3.6.0
+    profiles: ['observability']
     ports:
-      - "8080:8080"
-      - "8081:8081"
-
-  grafana:
-    image: grafana/grafana:4.5.2
-    env_file:
-      - grafana/grafana.env
-    links:
-      - prometheus:prometheus
-    ports:
-      - "3000:3000"
-    restart: always
-    volumes:
-      - ./data/grafana:/var/lib/grafana
-
-  logspout:
-    build: logspout
-#    command: syslog+tcp://logs.papertrailapp.com:$PAPERTRAIL_PORT
-    env_file:
-      - logspout/logspout.env
-    restart: always
-    ports:
-      - "8000:80"
-    volumes:
-      # security concern:
-      # https://raesene.github.io/blog/2016/03/06/The-Dangers-Of-Docker.sock/
-      # http://stackoverflow.com/questions/40844197
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
-  pickle-factory:
-    build: pickle-factory
-    env_file:
-      - pickle.env
-    volumes:
-      - ./pickle-factory:/usr/src/app
-
-  pickle-shop:
-    build: pickle-shop
-    env_file:
-      - pickle.env
+      - '8080:8080'
+      - '8081:8081'
+    depends_on:
+      cassandra:
+        condition: service_healthy
 
   prometheus:
-    image: prom/prometheus:v1.7.1
-    links:
-      - cassandra:cassandra
-      - cassandra-reaper:cassandra-reaper
+    image: prom/prometheus:v2.52.0
+    profiles: ['observability']
     ports:
-      - "9090:9090"
+      - '9090:9090'
     volumes:
-      - ./data/prometheus:/prometheus
-      - ./prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./cassandra-seeds/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    profiles: ['observability']
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  cassandra-data:
+  prometheus-data:
+  grafana-data:
+# NOTE: the legacy logspout service mounted /var/run/docker.sock (privileged).
+# It was removed. If you need log routing, use an explicit logging driver
+# instead of mounting the Docker socket.

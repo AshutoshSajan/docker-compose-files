@@ -1,1 +1,4 @@
 dump/
+.env
+data/
+*.tigerbeetle

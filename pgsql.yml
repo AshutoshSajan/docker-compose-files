@@ -1,20 +1,26 @@
-version: '3.3'
-
 services:
   postgresql-db:
-    image: postgres:14.1
+    image: postgres:16
     container_name: psql
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
     networks:
       - turreta_network
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./sql_scripts:/docker-entrypoint-initdb.d # for creating a sql file to create schema or tables
+      # Put *.sql / *.sh files in ./sql_scripts to seed the DB on first start.
+      - ./sql_scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-admin} -d $${POSTGRES_DB:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 networks:
   turreta_network:
@@ -23,5 +29,7 @@ networks:
 volumes:
   db-data:
     driver: local
-# sudo docker exec -it 3e86bb8cabd4 bash
-# psql -U admin -d postgres
+# Usage:
+#   docker compose -f pgsql.yml up -d
+#   docker exec -it psql bash
+#   psql -U admin -d postgres

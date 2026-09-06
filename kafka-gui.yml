@@ -1,15 +1,14 @@
----
 # https://github.com/provectus/kafka-ui/blob/master/documentation/compose/DOCKER_COMPOSE.md
-version: '2'
+# Full local stack: 2 Kafka clusters + Schema Registry + Connect + kafka-ui.
+# All Confluent images pinned to the same version. Run: docker compose -f kafka-gui.yml up -d
 services:
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
     ports:
-      - 8080:8080
+      - '${KAFKA_UI_PORT:-8080}:8080'
     depends_on:
-      - zookeeper0
-      - zookeeper1
       - kafka0
       - kafka1
       - schemaregistry0
@@ -29,19 +28,36 @@ services:
       KAFKA_CLUSTERS_1_SCHEMAREGISTRY: http://schemaregistry1:8085
       KAFKA_CLUSTERS_1_KAFKACONNECT_0_NAME: first
       KAFKA_CLUSTERS_1_KAFKACONNECT_0_ADDRESS: http://kafka-connect0:8083
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/actuator/health | grep -q UP']
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   zookeeper0:
-    image: confluentinc/cp-zookeeper:5.2.4
+    image: confluentinc/cp-zookeeper:7.6.1
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 2181:2181
+    volumes:
+      - zookeeper0-data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ['CMD-SHELL', 'cub zk-ready zookeeper0:2181 30']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   kafka0:
-    image: confluentinc/cp-kafka:5.3.1
+    image: confluentinc/cp-kafka:7.6.1
+    restart: unless-stopped
     depends_on:
-      - zookeeper0
+      zookeeper0:
+        condition: service_healthy
     ports:
       - 9092:9092
       - 9997:9997
@@ -54,22 +70,41 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       JMX_PORT: 9997
       KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka0 -Dcom.sun.management.jmxremote.rmi.port=9997
+    volumes:
+      - kafka0-data:/var/lib/kafka/data
+    healthcheck:
+      test: ['CMD-SHELL', 'cub kafka-ready -b kafka0:29092 1 20']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   zookeeper1:
-    image: confluentinc/cp-zookeeper:5.2.4
+    image: confluentinc/cp-zookeeper:7.6.1
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper1-data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ['CMD-SHELL', 'cub zk-ready zookeeper1:2181 30']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   kafka1:
-    image: confluentinc/cp-kafka:5.3.1
+    image: confluentinc/cp-kafka:7.6.1
+    restart: unless-stopped
     depends_on:
-      - zookeeper1
+      zookeeper1:
+        condition: service_healthy
     ports:
       - 9093:9093
       - 9998:9998
     environment:
-      KAFKA_BROKER_ID: 1
+      KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:29092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
@@ -77,14 +112,25 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       JMX_PORT: 9998
       KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka1 -Dcom.sun.management.jmxremote.rmi.port=9998
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+    healthcheck:
+      test: ['CMD-SHELL', 'cub kafka-ready -b kafka1:29092 1 20']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   schemaregistry0:
-    image: confluentinc/cp-schema-registry:5.5.0
+    image: confluentinc/cp-schema-registry:7.6.1
+    restart: unless-stopped
     ports:
       - 8085:8085
     depends_on:
-      - zookeeper0
-      - kafka0
+      zookeeper0:
+        condition: service_healthy
+      kafka0:
+        condition: service_healthy
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka0:29092
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper0:2181
@@ -97,12 +143,15 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
 
   schemaregistry1:
-    image: confluentinc/cp-schema-registry:5.5.0
+    image: confluentinc/cp-schema-registry:7.6.1
+    restart: unless-stopped
     ports:
       - 18085:8085
     depends_on:
-      - zookeeper1
-      - kafka1
+      zookeeper1:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:29092
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper1:2181
@@ -115,12 +164,15 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
 
   kafka-connect0:
-    image: confluentinc/cp-kafka-connect:6.0.1
+    image: confluentinc/cp-kafka-connect:7.6.1
+    restart: unless-stopped
     ports:
       - 8083:8083
     depends_on:
-      - kafka0
-      - schemaregistry0
+      kafka0:
+        condition: service_healthy
+      schemaregistry0:
+        condition: service_started
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka0:29092
       CONNECT_GROUP_ID: compose-connect-group
@@ -140,14 +192,23 @@ services:
       CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
 
   kafka-init-topics:
-    image: confluentinc/cp-kafka:5.3.1
+    image: confluentinc/cp-kafka:7.6.1
     volumes:
-      - ./message.json:/data/message.json
+      - ./kafka-seeds:/data:ro
     depends_on:
-      - kafka1
+      kafka0:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
       cub kafka-ready -b kafka1:29092 1 30 && \
-      kafka-topics --create --topic second.users --partitions 3 --replication-factor 1 --if-not-exists --zookeeper zookeeper1:2181 && \
-      kafka-topics --create --topic second.messages --partitions 2 --replication-factor 1 --if-not-exists --zookeeper zookeeper1:2181 && \
-      kafka-topics --create --topic first.messages --partitions 2 --replication-factor 1 --if-not-exists --zookeeper zookeeper0:2181 && \
-      kafka-console-producer --broker-list kafka1:29092 -topic second.users < /data/message.json'"
+      kafka-topics --create --topic second.users --partitions 3 --replication-factor 1 --if-not-exists --bootstrap-server kafka1:29092 && \
+      kafka-topics --create --topic second.messages --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server kafka1:29092 && \
+      kafka-topics --create --topic first.messages --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:29092 && \
+      kafka-console-producer --bootstrap-server kafka1:29092 --topic second.users < /data/message.json'"
+
+volumes:
+  zookeeper0-data:
+  kafka0-data:
+  zookeeper1-data:
+  kafka1-data:

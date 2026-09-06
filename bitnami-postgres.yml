@@ -1,17 +1,24 @@
 # Copyright VMware, Inc.
 # SPDX-License-Identifier: APACHE-2.0
 
-version: '2'
-
 services:
   postgresql:
     image: docker.io/bitnami/postgresql:16
+    restart: unless-stopped
     ports:
-      - '5432:5432'
+      - '${BITNAMI_POSTGRES_PORT:-5432}:5432'
     volumes:
       - 'postgresql_data:/bitnami/postgresql'
     environment:
-      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'POSTGRESQL_USERNAME=${POSTGRES_USER:-admin}'
+      - 'POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD:-admin}'
+      - 'POSTGRESQL_DATABASE=${POSTGRES_DB:-postgres}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRESQL_USERNAME:-admin} -d $${POSTGRESQL_DATABASE:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   postgresql_data:

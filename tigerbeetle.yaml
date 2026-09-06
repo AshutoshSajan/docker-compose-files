@@ -1,22 +1,41 @@
-version: '3.7'
-
 ##
-# Note: this example might only work with linux + using `network_mode:host` because of 2 reasons:
+# TigerBeetle 3-node local cluster (Linux + `network_mode: host` required —
+# see notes in the original file about DNS vs --addresses validation).
 #
-# 1. When specifying an internal docker network, other containers are only available using dns based routing:
-#    e.g. from tigerbeetle_0, the other replicas are available at `tigerbeetle_1:3002` and
-#    `tigerbeetle_2:3003` respectively.
-#
-# 2. Tigerbeetle performs some validation of the ip address provided in the `--addresses` parameter
-#    and won't let us specify a custom domain name.
-#
-# The workaround for now is to use `network_mode:host` in the containers instead of specifying our
-# own internal docker network
+# First-time setup (formats ./data/*.tigerbeetle, safe to re-run with --profile format):
+#   docker compose -f tigerbeetle.yaml --profile format up
+# Then:
+#   docker compose -f tigerbeetle.yaml up -d
 ##
 
 services:
+  format:
+    image: ghcr.io/tigerbeetle/tigerbeetle
+    profiles: ['format']
+    network_mode: host
+    volumes:
+      - ./data:/data
+    command: 'format --cluster=0 --replica=0 --replica-count=3 /data/0_0.tigerbeetle'
+
+  format-1:
+    image: ghcr.io/tigerbeetle/tigerbeetle
+    profiles: ['format']
+    network_mode: host
+    volumes:
+      - ./data:/data
+    command: 'format --cluster=0 --replica=1 --replica-count=3 /data/0_1.tigerbeetle'
+
+  format-2:
+    image: ghcr.io/tigerbeetle/tigerbeetle
+    profiles: ['format']
+    network_mode: host
+    volumes:
+      - ./data:/data
+    command: 'format --cluster=0 --replica=2 --replica-count=3 /data/0_2.tigerbeetle'
+
   tigerbeetle_0:
     image: ghcr.io/tigerbeetle/tigerbeetle
+    restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_0.tigerbeetle'
     network_mode: host
     volumes:
@@ -24,6 +43,7 @@ services:
 
   tigerbeetle_1:
     image: ghcr.io/tigerbeetle/tigerbeetle
+    restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_1.tigerbeetle'
     network_mode: host
     volumes:
@@ -31,6 +51,7 @@ services:
 
   tigerbeetle_2:
     image: ghcr.io/tigerbeetle/tigerbeetle
+    restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_2.tigerbeetle'
     network_mode: host
     volumes:

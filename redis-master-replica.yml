@@ -1,25 +1,48 @@
-version: "2"
-
 services:
   redis-master:
-    image: "bitnami/redis:latest"
+    image: 'bitnami/redis:7.4'
+    restart: unless-stopped
     ports:
-      - "6379"
+      - '${REDIS_MASTER_PORT:-6379}:6379'
     environment:
       - REDIS_REPLICATION_MODE=master
-      - REDIS_PASSWORD=my_master_password
+      - REDIS_PASSWORD=${REDIS_MASTER_PASSWORD:-changeme-master}
+      - ALLOW_EMPTY_PASSWORD=no
     volumes:
-      - "/path/to/redis-persistence:/bitnami"
+      - 'redis-master-data:/bitnami/redis/data'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD:-changeme-master}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis-replica:
-    image: "bitnami/redis:latest"
+    image: 'bitnami/redis:7.4'
+    restart: unless-stopped
     ports:
-      - "6379"
+      - '${REDIS_REPLICA_PORT:-6380}:6379'
     depends_on:
-      - redis-master
+      redis-master:
+        condition: service_healthy
     environment:
-      - REDIS_REPLICATION_MODE=slave
+      - REDIS_REPLICATION_MODE=replica
       - REDIS_MASTER_HOST=redis-master
       - REDIS_MASTER_PORT_NUMBER=6379
-      - REDIS_MASTER_PASSWORD=my_master_password
-      - REDIS_PASSWORD=my_replica_password
+      - REDIS_MASTER_PASSWORD=${REDIS_MASTER_PASSWORD:-changeme-master}
+      - REDIS_PASSWORD=${REDIS_REPLICA_PASSWORD:-changeme-replica}
+      - ALLOW_EMPTY_PASSWORD=no
+    volumes:
+      - 'redis-replica-data:/bitnami/redis/data'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD:-changeme-replica}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  redis-master-data:
+    driver: local
+  redis-replica-data:
+    driver: local

@@ -1,8 +1,12 @@
-version: '3.3'
 services:
   julia-docker:
-    image: julia
+    image: julia:1.10
+    working_dir: /work
+    stdin_open: true
+    tty: true
     ports:
-      - '7777:7777'
+      - '${JULIA_PORT:-7777}:7777'
     volumes:
-      - './:/opt/julia'
+      - './julia-work:/work'
+    # Default to an interactive REPL. Override for scripts, e.g.:
+    # command: ["julia", "hello.jl"]

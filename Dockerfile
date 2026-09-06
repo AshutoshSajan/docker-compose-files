@@ -1,12 +1,11 @@
-FROM jenkins/jenkins:2.375.1-jdk11
+FROM jenkins/jenkins:2.462.3-lts-jdk17
 USER root
-RUN apt-get update && apt-get install -y lsb-release
-RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
-  https://download.docker.com/linux/debian/gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) \
-  signed-by=/usr/share/keyrings/docker-archive-keyring.asc] \
-  https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-RUN apt-get update && apt-get install -y docker-ce-cli
+RUN apt-get update && apt-get install -y --no-install-recommends lsb-release ca-certificates curl gnupg \
+  && curl -fsSL https://download.docker.com/linux/debian/gpg -o /usr/share/keyrings/docker-archive-keyring.asc \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list \
+  && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 USER jenkins
-RUN jenkins-plugin-cli --plugins "blueocean:1.25.8 docker-workflow:521.v1a_a_dd2073b_2e"
+# NOTE: Blue Ocean is deprecated and no longer installed by default.
+# Install only maintained plugins; pin versions via plugins.txt in CI.
+RUN jenkins-plugin-cli --plugins "docker-workflow git workflow-aggregator"
