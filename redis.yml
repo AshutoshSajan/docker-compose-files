@@ -1,18 +1,16 @@
 services:
   redis:
-    image: 'bitnami/redis:7.4'
+    # NOTE: bitnami/redis community tags were removed from Docker Hub;
+    # this file now uses the official image.
+    image: 'redis:7.4'
     restart: always
-    environment:
-      # Set REDIS_PASSWORD in .env. Empty passwords are refused by default.
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
-      - ALLOW_EMPTY_PASSWORD=${REDIS_ALLOW_EMPTY:-no}
-      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme} --rename-command FLUSHDB "" --rename-command FLUSHALL ""
     ports:
       - '${REDIS_PORT:-6379}:6379'
     volumes:
-      - 'redis_data:/bitnami/redis/data'
+      - 'redis_data:/data'
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD:-changeme}', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-changeme}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

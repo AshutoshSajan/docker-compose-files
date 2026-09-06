@@ -1,41 +1,34 @@
 services:
   redis-master:
-    image: 'bitnami/redis:7.4'
+    # NOTE: bitnami/redis community tags were removed from Docker Hub;
+    # this file now uses the official image.
+    image: 'redis:7.4'
     restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_MASTER_PASSWORD:-changeme-master}
     ports:
       - '${REDIS_MASTER_PORT:-6379}:6379'
-    environment:
-      - REDIS_REPLICATION_MODE=master
-      - REDIS_PASSWORD=${REDIS_MASTER_PASSWORD:-changeme-master}
-      - ALLOW_EMPTY_PASSWORD=no
     volumes:
-      - 'redis-master-data:/bitnami/redis/data'
+      - 'redis-master-data:/data'
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD:-changeme-master}', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_MASTER_PASSWORD:-changeme-master}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
 
   redis-replica:
-    image: 'bitnami/redis:7.4'
+    image: 'redis:7.4'
     restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_REPLICA_PASSWORD:-changeme-replica} --masterauth ${REDIS_MASTER_PASSWORD:-changeme-master} --replicaof redis-master 6379
     ports:
       - '${REDIS_REPLICA_PORT:-6380}:6379'
     depends_on:
       redis-master:
         condition: service_healthy
-    environment:
-      - REDIS_REPLICATION_MODE=replica
-      - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PORT_NUMBER=6379
-      - REDIS_MASTER_PASSWORD=${REDIS_MASTER_PASSWORD:-changeme-master}
-      - REDIS_PASSWORD=${REDIS_REPLICA_PASSWORD:-changeme-replica}
-      - ALLOW_EMPTY_PASSWORD=no
     volumes:
-      - 'redis-replica-data:/bitnami/redis/data'
+      - 'redis-replica-data:/data'
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD:-changeme-replica}', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_REPLICA_PASSWORD:-changeme-replica}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

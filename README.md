@@ -23,12 +23,12 @@ docker compose -f <file>.yml config
 | File | Service(s) | Default ports | Notes |
 |---|---|---|---|
 | `pgsql.yml` | Postgres 16 (official) | 5432 | `POSTGRES_*` in `.env`, seeds from `./sql_scripts`, healthcheck `pg_isready` |
-| `bitnami-postgres.yml` | Postgres 16 (Bitnami) | 5432 (example uses 5433) | Alternative to `pgsql.yml`; pick one |
+| `bitnami-postgres.yml` | Postgres 16 (official image; ex-Bitnami file) | 5433 | Alternative to `pgsql.yml`; pick one (port 5433 avoids clash) |
 | `mysql.yml` | MySQL 8.4 LTS | 3306 | Non-root `MYSQL_USER`, `mysqladmin ping` healthcheck |
 | `mongodb.yml` | MongoDB 7.0 | 27017 | Persistent `db-data` + root auth + `mongosh ping` |
-| `redis.yml` | Redis 7.4 (Bitnami) | 6379 | Password required by default, `FLUSHDB/FLUSHALL` disabled |
+| `redis.yml` | Redis 7.4 (official) | 6379 | Password required by default, `FLUSHDB/FLUSHALL` disabled |
 | `redis-master-replica.yml` | Redis master + replica | 6379, 6380 | Named volumes (no placeholder paths), replica waits for healthy master |
-| `rabbitmq.yml` | RabbitMQ 3.13 (Bitnami, mgmt) | 5672, 15672 | `RABBITMQ_*` in `.env`, `rabbitmq-diagnostics ping` |
+| `rabbitmq.yml` | RabbitMQ 3.13 (official, mgmt) | 5672, 15672 | `RABBITMQ_*` in `.env`, `rabbitmq-diagnostics ping` |
 | `kafka.yml` | Kafka 3.8 KRaft (no ZK) | 9094 host | Replaces unmaintained `wurstmeister/*`; no `docker.sock` mount |
 | `zookeeper-kafka.yml` | Kafka 7.6 + Zookeeper | 9092 | Minimal Confluent example with `cub` healthchecks + volumes |
 | `kafka-gui.yml` | 2x Kafka + ZK + Schema Registry + Connect + kafka-ui | 8080, 9092-9093, 8083, 8085 | All Confluent images pinned to 7.6.1; seeds from `./kafka-seeds/message.json`; fixed duplicate broker id |
@@ -44,7 +44,8 @@ Renamed: `rabitmq.yml` → `rabbitmq.yml`.
 ## Conventions applied to every file
 
 * No obsolete `version:` key (Compose Spec).
-* Images bumped off EOL tags; restart policies set.
+* Images bumped off EOL tags; restart policies set. Bitnami community tags were
+  removed from Docker Hub, so ex-Bitmami files now use official images.
 * No hardcoded secrets — `${VAR:-default}` with `.env.example`; copy to `.env` (git-ignored).
 * `healthcheck:` + `depends_on: condition: service_healthy` where ordering matters.
 * Named volumes for all stateful services; no `/path/to/...` placeholders.

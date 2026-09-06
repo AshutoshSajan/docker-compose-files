@@ -1,6 +1,8 @@
 services:
   rabbitmq:
-    image: docker.io/bitnami/rabbitmq:3.13
+    # NOTE: bitnami/rabbitmq community tags were removed from Docker Hub;
+    # this file now uses the official image (management UI on 15672).
+    image: rabbitmq:3.13-management
     restart: unless-stopped
     ports:
       - '${RABBITMQ_AMQP_PORT:-5672}:5672'
@@ -9,12 +11,11 @@ services:
       # - '4369:4369'
       # - '25672:25672'
     environment:
-      - RABBITMQ_USERNAME=${RABBITMQ_USER:-user}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-changeme}
-      - RABBITMQ_ERL_COOKIE=${RABBITMQ_ERL_COOKIE:-changeme-cookie}
-      - RABBITMQ_LOGS=-
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-user}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-changeme}
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERL_COOKIE:-changeme-cookie}
     volumes:
-      - 'rabbitmq_data:/bitnami/rabbitmq/mnesia'
+      - 'rabbitmq_data:/var/lib/rabbitmq'
     healthcheck:
       test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
       interval: 15s
