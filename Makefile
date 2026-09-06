@@ -2,8 +2,8 @@
 # Usage: make up-redis | make logs-pgsql | make down-kafka | make config-mysql
 # Version/secret overrides live in .env (auto-created from .env.example).
 
-SERVICES := bitnami-postgres cassandra elastic-search julia kafka kafka-gui \
-	mongodb mysql nginx pgsql rabbitmq redis redis-master-replica \
+SERVICES := cassandra elastic-search julia kafka kafka-gui \
+	mongodb mysql nginx pgsql postgres-alt rabbitmq redis redis-master-replica \
 	tigerbeetle zookeeper-kafka
 
 # Single-line helper (must stay on one line: each recipe line is its own shell).
@@ -41,9 +41,9 @@ list: ## List available services
 
 .PHONY: ps-all
 ps-all: ## Show running containers for all stacks
-	@for s in $(SERVICES); do \
+	@e=".env"; [ -n "$(ENV)" ] && e=".env.$(ENV)"; [ -f "$$e" ] || e=".env.example"; for s in $(SERVICES); do \
 	  f="$$s.yml"; [ -f "$$f" ] || f="$$s.yaml"; \
-	  echo "=== $$s ==="; docker compose -f "$$f" ps; \
+	  echo "=== $$s ==="; docker compose --env-file "$$e" -f "$$f" ps; \
 	done
 
 up-%: ## Start a service detached: make up-redis
@@ -81,7 +81,7 @@ backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis): make backup-pgsql
 	set -a; . "./$$e"; set +a; ts=$$(date +%Y%m%d-%H%M%S); \
 	case "$*" in \
 	  pgsql) docker compose --env-file "$$e" -f "$$f" exec -T postgresql-db pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/pgsql-$$ts.sql" ;; \
-	  bitnami-postgres) docker compose --env-file "$$e" -f "$$f" exec -T postgresql pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/bitnami-postgres-$$ts.sql" ;; \
+	  postgres-alt) docker compose --env-file "$$e" -f "$$f" exec -T postgresql pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/postgres-alt-$$ts.sql" ;; \
 	  mysql) docker compose --env-file "$$e" -f "$$f" exec -T db mysqldump -h localhost -u root --password="$${MYSQL_ROOT_PASSWORD:-changeme-root}" --all-databases > "dump/mysql-$$ts.sql" ;; \
 	  mongodb) cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q mongo); \
 	    docker compose --env-file "$$e" -f "$$f" exec -T mongo mongodump -u "$${MONGO_ROOT_USER:-root}" -p "$${MONGO_ROOT_PASSWORD:-changeme}" --authenticationDatabase admin --archive=/tmp/mdump.archive --gzip && \
@@ -93,5 +93,5 @@ backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis): make backup-pgsql
 	  redis-master-replica) docker compose --env-file "$$e" -f "$$f" exec -T redis-master redis-cli -a "$${REDIS_MASTER_PASSWORD:-changeme-master}" BGSAVE; sleep 3; \
 	    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis-master); \
 	    docker cp "$$cid:/data/dump.rdb" "dump/redis-master-$$ts.rdb" ;; \
-	  *) echo "No backup defined for '$*'. Supported: pgsql bitnami-postgres mysql mongodb redis redis-master-replica"; exit 1 ;; \
+	  *) echo "No backup defined for '$*'. Supported: pgsql postgres-alt mysql mongodb redis redis-master-replica"; exit 1 ;; \
 	esac; ls -la dump/ | tail -n +2

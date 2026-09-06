@@ -36,6 +36,3 @@ services:
 
 volumes:
   mongo-data:
-# Usage:
-#   docker compose -f mongodb.yml up -d
-#   docker compose -f mongodb.yml down

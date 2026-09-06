@@ -8,6 +8,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends lsb-release ca-
   && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 USER jenkins
-# NOTE: Blue Ocean is deprecated and no longer installed by default.
-# Install only maintained plugins; pin versions via plugins.txt in CI.
+# Blue Ocean is deprecated, so only maintained plugins are installed.
 RUN jenkins-plugin-cli --plugins "docker-workflow git workflow-aggregator"

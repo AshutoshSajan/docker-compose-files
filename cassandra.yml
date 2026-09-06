@@ -1,6 +1,4 @@
-# Minimal working Cassandra for local dev (replaces the old broken file that
-# referenced missing build contexts like ./cassandra, ./logspout, ./pickle-*).
-# Full observability stack (Reaper/Prometheus/Grafana) is available via profiles.
+# Cassandra for local dev.
 services:
   cassandra:
     image: cassandra:${CASSANDRA_VERSION:-5.0}
@@ -45,7 +43,7 @@ services:
       cassandra:
         condition: service_healthy
 
-  # Optional repair + metrics (Reaper UI :8080, Grafana :3000), behind profiles:
+  # Repair + metrics (Reaper UI :8080, Grafana :3000) behind profiles:
   #   docker compose -f cassandra.yml --profile observability up -d
   #   GUI=1 make up-cassandra   (same stack via the 'gui' profile)
   cassandra-reaper:
@@ -83,6 +81,3 @@ volumes:
   cassandra-data:
   prometheus-data:
   grafana-data:
-# NOTE: the legacy logspout service mounted /var/run/docker.sock (privileged).
-# It was removed. If you need log routing, use an explicit logging driver
-# instead of mounting the Docker socket.

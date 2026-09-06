@@ -21,7 +21,7 @@ jobs:
       - name: Validate opt-in gui profiles
         run: |
           set -e
-          for s in pgsql bitnami-postgres mysql mongodb redis redis-master-replica kafka zookeeper-kafka elastic-search; do
+          for s in pgsql postgres-alt mysql mongodb redis redis-master-replica kafka zookeeper-kafka elastic-search; do
             echo "== $s (gui)"
             docker compose --profile gui -f "$s.yml" config -q
           done

@@ -1,12 +1,9 @@
-##
-# TigerBeetle 3-node local cluster (Linux + `network_mode: host` required —
-# see notes in the original file about DNS vs --addresses validation).
+# TigerBeetle 3-node local cluster. Requires Linux + `network_mode: host`
+# (TigerBeetle validates `--addresses` IPs, so DNS names don't work).
 #
-# First-time setup (formats ./data/*.tigerbeetle, safe to re-run with --profile format):
+# First boot: format the data files once, then start:
 #   docker compose -f tigerbeetle.yaml --profile format up
-# Then:
 #   docker compose -f tigerbeetle.yaml up -d
-##
 
 services:
   format:

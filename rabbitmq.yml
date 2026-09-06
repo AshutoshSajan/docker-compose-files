@@ -1,7 +1,5 @@
 services:
   rabbitmq:
-    # NOTE: bitnami/rabbitmq community tags were removed from Docker Hub;
-    # this file now uses the official image (management UI on 15672).
     image: rabbitmq:${RABBITMQ_VERSION:-4.3-management}
     restart: unless-stopped
     ports:

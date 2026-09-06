@@ -1,14 +1,11 @@
-# Alternative Postgres stack (originally Bitnami-based).
-# NOTE: bitnami/postgresql community tags were removed from Docker Hub,
-# so this file now uses the official postgres image (see POSTGRES_VERSION)
-# with the same service/volume names. Default port 5433 avoids clashing with pgsql.yml.
+# Second Postgres stack on port 5433 (pgsql.yml uses 5432). Pick one.
 
 services:
   postgresql:
     image: postgres:${POSTGRES_VERSION:-18}
     restart: unless-stopped
     ports:
-      - '${BITNAMI_POSTGRES_PORT:-5433}:5432'
+      - '${ALT_POSTGRES_PORT:-5433}:5432'
     volumes:
       # Parent mount: required by Postgres 18+, older majors use .../data inside it.
       - 'postgresql-data:/var/lib/postgresql'
@@ -23,8 +20,8 @@ services:
       retries: 5
       start_period: 20s
 
-  # Web UI (opt-in): docker compose -f bitnami-postgres.yml --profile gui up -d
-  #   or: GUI=1 make up-bitnami-postgres  →  http://localhost:5050
+  # Web UI (opt-in): docker compose -f postgres-alt.yml --profile gui up -d
+  #   or: GUI=1 make up-postgres-alt  →  http://localhost:5050
   pgadmin:
     image: dpage/pgadmin4:${PGADMIN_VERSION:-9}
     profiles: ['gui']

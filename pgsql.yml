@@ -10,7 +10,7 @@ services:
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     networks:
-      - turreta_network
+      - pgsql_network
     volumes:
       # NOTE: Postgres 18+ requires the mount at /var/lib/postgresql (parent);
       # older majors then use the .../data subdir automatically.
@@ -38,13 +38,13 @@ services:
     volumes:
       - pgadmin-data:/var/lib/pgadmin
     networks:
-      - turreta_network
+      - pgsql_network
     depends_on:
       postgresql-db:
         condition: service_healthy
 
 networks:
-  turreta_network:
+  pgsql_network:
     driver: bridge
 
 volumes:
@@ -52,7 +52,3 @@ volumes:
     driver: local
   pgadmin-data:
     driver: local
-# Usage:
-#   docker compose -f pgsql.yml up -d
-#   docker exec -it psql bash
-#   psql -U admin -d postgres

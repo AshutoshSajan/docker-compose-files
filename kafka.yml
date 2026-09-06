@@ -1,6 +1,4 @@
 # Single-broker Kafka with KRaft (no Zookeeper).
-# Replaces the old wurstmeister image (unmaintained) and removes the
-# insecure /var/run/docker.sock mount.
 services:
   kafka:
     image: apache/kafka:${KAFKA_VERSION:-4.3.1}

@@ -1,7 +1,5 @@
 services:
   redis-master:
-    # NOTE: bitnami/redis community tags were removed from Docker Hub;
-    # this file now uses the official image.
     image: 'redis:${REDIS_VERSION:-8}'
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_MASTER_PASSWORD:-changeme-master}

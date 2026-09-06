@@ -1,6 +1,5 @@
-# https://github.com/provectus/kafka-ui/blob/master/documentation/compose/DOCKER_COMPOSE.md
 # Full local stack: 2 Kafka clusters + Schema Registry + Connect + kafka-ui.
-# All Confluent images pinned to the same version. Run: docker compose -f kafka-gui.yml up -d
+# (Upstream docs moved to the maintained fork: https://github.com/kafbat/kafka-ui)
 services:
   kafka-ui:
     container_name: kafka-ui
@@ -9,10 +8,14 @@ services:
     ports:
       - '${KAFKA_UI_PORT:-8080}:8080'
     depends_on:
-      - kafka0
-      - kafka1
-      - schemaregistry0
-      - kafka-connect0
+      kafka0:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      schemaregistry0:
+        condition: service_started
+      kafka-connect0:
+        condition: service_started
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka0:29092
