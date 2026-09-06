@@ -2,6 +2,10 @@ services:
   redis:
     image: 'redis:${REDIS_VERSION:-8}'
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme} --rename-command FLUSHDB "" --rename-command FLUSHALL ""
     ports:
       - '${REDIS_PORT:-6379}:6379'

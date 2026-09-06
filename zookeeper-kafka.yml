@@ -3,6 +3,10 @@ services:
     image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.9.9}
     container_name: zookeeper
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -20,6 +24,10 @@ services:
     image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     container_name: broker
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports:
       # To learn about configuring Kafka for access across networks see
       # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
@@ -59,6 +67,7 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+    # No healthcheck: the kafka-ui image ships no shell/HTTP client.
 
 volumes:
   zookeeper-data:

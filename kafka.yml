@@ -4,6 +4,10 @@ services:
     image: apache/kafka:${KAFKA_VERSION:-4.3.1}
     container_name: kafka
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports:
       - '${KAFKA_PORT:-9094}:9094'
     environment:
@@ -43,6 +47,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    # No healthcheck: the kafka-ui image ships no shell/HTTP client.
 
 volumes:
   kafka-data:

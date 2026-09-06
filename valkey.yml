@@ -2,6 +2,10 @@ services:
   valkey:
     image: 'valkey/valkey:${VALKEY_VERSION:-8}'
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     command: valkey-server --appendonly yes --requirepass ${VALKEY_PASSWORD:-changeme} --rename-command FLUSHDB "" --rename-command FLUSHALL ""
     ports:
       - '${VALKEY_PORT:-6381}:6379'

@@ -3,6 +3,10 @@ services:
     image: postgres:${POSTGRES_VERSION:-18}
     container_name: psql
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
@@ -42,6 +46,12 @@ services:
     depends_on:
       postgresql-db:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'python -c "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen(''http://127.0.0.1:80/login'').status == 200 else 1)"']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 networks:
   pgsql_network:

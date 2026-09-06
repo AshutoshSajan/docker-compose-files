@@ -31,16 +31,15 @@ services:
       KAFKA_CLUSTERS_1_SCHEMAREGISTRY: http://schemaregistry1:8085
       KAFKA_CLUSTERS_1_KAFKACONNECT_0_NAME: first
       KAFKA_CLUSTERS_1_KAFKACONNECT_0_ADDRESS: http://kafka-connect0:8083
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/actuator/health | grep -q UP']
-      interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+    # No healthcheck: the kafka-ui image ships no shell/HTTP client.
 
   zookeeper0:
     image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -58,6 +57,10 @@ services:
   kafka0:
     image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     depends_on:
       zookeeper0:
         condition: service_healthy
@@ -85,6 +88,10 @@ services:
   zookeeper1:
     image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -100,6 +107,10 @@ services:
   kafka1:
     image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     depends_on:
       zookeeper1:
         condition: service_healthy
@@ -127,6 +138,10 @@ services:
   schemaregistry0:
     image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports:
       - 8085:8085
     depends_on:
@@ -148,6 +163,10 @@ services:
   schemaregistry1:
     image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports:
       - 18085:8085
     depends_on:
@@ -169,6 +188,10 @@ services:
   kafka-connect0:
     image: confluentinc/cp-kafka-connect:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports:
       - 8083:8083
     depends_on:

@@ -4,6 +4,10 @@ services:
     image: cassandra:${CASSANDRA_VERSION:-5.0}
     container_name: cassandra
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4g
     environment:
       - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER:-local-cluster}
       - CASSANDRA_DC=${CASSANDRA_DC:-datacenter1}

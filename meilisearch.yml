@@ -2,6 +2,10 @@ services:
   meilisearch:
     image: getmeili/meilisearch:${MEILI_VERSION:-v1}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports:
       - '${MEILI_PORT:-7700}:7700'
     environment:

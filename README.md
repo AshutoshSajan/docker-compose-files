@@ -415,6 +415,12 @@ redis-commander `:8084` (both redis files), Prometheus `:9090` / Grafana
 * Official, maintained images; restart policies set.
 * No hardcoded secrets — `${VAR:-default}` with `.env.example`; copy to `.env` (git-ignored).
 * `healthcheck:` + `depends_on: condition: service_healthy` where ordering matters.
+* Generous `deploy.resources.limits.memory` caps on JVMs and databases
+  (ES/Cassandra/Kafka/MySQL/…) so one stack can't eat your laptop; small
+  UIs and CLIs are uncapped.
+* No log rotation per file — set it once per machine in
+  `/etc/docker/daemon.json` (then `systemctl restart docker`):
+  `{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}`.
 * Named volumes for all stateful services; no `/path/to/...` placeholders.
   Volume names are prefixed per stack (`pgsql-data`, `mongo-data`, …) so
   stacks never share a data dir. Postgres mounts `/var/lib/postgresql`
