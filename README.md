@@ -273,6 +273,41 @@ docker build --build-arg JENKINS_VERSION=2.555.3-lts-jdk21 .
 | `julia.yml` | Julia `${JULIA_VERSION:-1.12}` REPL | 7777 | Workdir `/work` mounted from `./julia-work` |
 | `Dockerfile` | Jenkins `${JENKINS_VERSION:-2.555.3-lts-jdk21}` + docker-cli | — | No deprecated Blue Ocean; cleaned apt layers |
 
+## Host ports
+
+Every published port and the `.env` var that moves it (`—` = fixed):
+
+| Host port | Stack | Env var |
+|---|---|---|
+| 5432 | `pgsql.yml` Postgres | `POSTGRES_PORT` |
+| 5433 | `postgres-alt.yml` Postgres | `ALT_POSTGRES_PORT` |
+| 5050 | pgAdmin (both pg files) | `PGADMIN_PORT` |
+| 3306 | `mysql.yml` | `MYSQL_PORT` |
+| 8081 | phpMyAdmin | `PHPMYADMIN_PORT` |
+| 27017 | `mongodb.yml` | `MONGO_PORT` |
+| 8082 | mongo-express | `MONGO_EXPRESS_PORT` |
+| 6379 | `redis.yml` / `redis-master-replica.yml` master | `REDIS_PORT` / `REDIS_MASTER_PORT` |
+| 6380 | replica | `REDIS_REPLICA_PORT` |
+| 8084 | redis-commander (both redis files) | `REDIS_COMMANDER_PORT` |
+| 5672, 15672 | `rabbitmq.yml` | `RABBITMQ_AMQP_PORT`, `RABBITMQ_MGMT_PORT` |
+| 9094 | `kafka.yml` | `KAFKA_PORT` |
+| 9092 | `zookeeper-kafka.yml` | `KAFKA_PORT` |
+| 8080 | kafka-ui (`kafka.yml`, `zookeeper-kafka.yml`, `kafka-gui.yml`) + Reaper | `KAFKA_UI_PORT`, `REAPER_PORT` |
+| 9092, 9093, 9997, 9998 | `kafka-gui.yml` brokers/JMX | — |
+| 8085, 18085, 8083, 2181 | `kafka-gui.yml` registries/connect/zk | — |
+| 9200 | `elastic-search.yml` | `ES_PORT` |
+| 5601 | Kibana | `KIBANA_PORT` |
+| 9042 | `cassandra.yml` | `CASSANDRA_PORT` |
+| 8081, 9090, 3000 | Reaper-internal, Prometheus, Grafana | — (`REAPER_PORT` for the UI) |
+| 3001–3003 | `tigerbeetle.yaml` (host net) | — |
+| 80, 443 | `nginx.yml` | `NGINX_HTTP_PORT`, `NGINX_HTTPS_PORT` |
+| 7777 | `julia.yml` | `JULIA_PORT` |
+
+Known overlaps when running several stacks at once: pgAdmin `:5050`
+(both pg files), kafka-ui `:8080` (all three Kafka files + Reaper),
+redis-commander `:8084` (both redis files) — override per stack via
+`ENV=<name>` or one-off `VAR=port make …`.
+
 ## Conventions applied to every file
 
 * No obsolete `version:` key (Compose Spec).
@@ -306,3 +341,7 @@ docker compose -f kafka-gui.yml up -d
 * Defaults in `.env.example` are for local dev only — change them.
 * ES `xpack.security.enabled=false` and Redis/Mongo/ES open ports are dev-only.
 * For shared/staging use Docker secrets (`*_FILE`) and enable TLS/auth.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
