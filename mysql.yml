@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     ports:
       - '${MYSQL_PORT:-3306}:3306'
     environment:
@@ -48,4 +48,4 @@ services:
 #     file: db_root_password.txt
 
 volumes:
-  db_data:
+  mysql-data:

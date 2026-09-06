@@ -1,0 +1,46 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate base configs (no profiles)
+        run: |
+          set -e
+          for f in *.yml *.yaml; do
+            echo "== $f"
+            docker compose -f "$f" config -q
+          done
+
+      - name: Validate opt-in gui profiles
+        run: |
+          set -e
+          for s in pgsql bitnami-postgres mysql mongodb redis redis-master-replica kafka zookeeper-kafka elastic-search; do
+            echo "== $s (gui)"
+            docker compose --profile gui -f "$s.yml" config -q
+          done
+          echo "== cassandra (tools/observability/gui)"
+          docker compose --profile tools --profile observability --profile gui -f cassandra.yml config -q
+          echo "== tigerbeetle (format)"
+          docker compose --profile format -f tigerbeetle.yaml config -q
+
+      - name: Validate example env file
+        run: docker compose --env-file .env.example -f redis.yml config -q
+
+      - name: Makefile smoke test
+        run: |
+          set -e
+          make help >/dev/null
+          make list
+          make config-redis >/dev/null
+          GUI=1 make config-redis >/dev/null
+          make env-ci-test
+          ENV=ci-test make config-pgsql >/dev/null
+          rm .env.ci-test
+          if make up-nope 2>/dev/null; then echo "expected failure for unknown service"; exit 1; fi

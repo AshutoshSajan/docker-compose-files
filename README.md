@@ -1,5 +1,7 @@
 # docker-compose-files
 
+![validate](https://github.com/AshutoshSajan/docker-compose-files/actions/workflows/validate.yml/badge.svg)
+
 Standalone Docker Compose snippets for local dev infrastructure.
 Each file is self-contained — pick one and run it with Docker Compose v2.
 
@@ -38,6 +40,42 @@ make config-nginx    # validate + print resolved config
 
 `.env` is auto-created from `.env.example` on first run.
 Per-invocation overrides work too: `REDIS_VERSION=7.4 make up-redis`.
+
+## Per-project environments
+
+One checkout, many projects — keep a separate env file per project:
+
+```bash
+make env-acme          # creates .env.acme from the template; edit it
+make up-redis ENV=acme # uses .env.acme (versions, passwords, ports)
+make backup-pgsql ENV=acme
+```
+
+`ENV=<name>` works with every target (`up/down/logs/ps/config/backup`,
+`GUI=1` can be combined: `GUI=1 make up-redis ENV=acme`). `.env.*` files
+are git-ignored; only `.env.example` is tracked.
+
+## Backups
+
+Dumps land in `./dump/` (git-ignored). The service must be running:
+
+```bash
+make backup-pgsql               # → dump/pgsql-<timestamp>.sql (pg_dump)
+make backup-mysql               # → dump/mysql-<timestamp>.sql (all DBs)
+make backup-mongodb             # → dump/mongodb-<timestamp>.archive.gz
+make backup-redis               # → dump/redis-<timestamp>.rdb (BGSAVE)
+make backup-redis-master-replica
+make backup-pgsql ENV=acme      # same, with project env
+```
+
+Restore is deliberately manual (destructive — check twice):
+
+```bash
+# Postgres:  docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres < dump/pgsql-<ts>.sql
+# MySQL:     docker compose -f mysql.yml exec -T db mysql -u root -p < dump/mysql-<ts>.sql
+# MongoDB:   docker compose -f mongodb.yml exec -T mongo mongorestore -u root -p changeme --authenticationDatabase admin --gzip --archive=/tmp/x.archive.gz
+# Redis:     stop, replace /data/dump.rdb in the redis_data volume, start
+```
 
 ## Web GUIs for every tool
 
@@ -141,6 +179,9 @@ Renamed: `rabitmq.yml` → `rabbitmq.yml`.
 * No hardcoded secrets — `${VAR:-default}` with `.env.example`; copy to `.env` (git-ignored).
 * `healthcheck:` + `depends_on: condition: service_healthy` where ordering matters.
 * Named volumes for all stateful services; no `/path/to/...` placeholders.
+  Volume names are prefixed per stack (`pgsql-data`, `mongo-data`, …) so
+  stacks never share a data dir. Postgres mounts `/var/lib/postgresql`
+  (parent dir) as required by the 18+ image — works for older majors too.
 * No read-write `/var/run/docker.sock` mounts (removed from Kafka; documented in Cassandra).
 * `tigerbeetle.yaml` keeps `network_mode: host` with Linux-only warning + explicit `format` step.
 

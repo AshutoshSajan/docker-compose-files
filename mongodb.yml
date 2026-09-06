@@ -5,7 +5,7 @@ services:
     ports:
       - '${MONGO_PORT:-27017}:27017'
     volumes:
-      - db-data:/data/db
+      - mongo-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
@@ -35,7 +35,7 @@ services:
         condition: service_healthy
 
 volumes:
-  db-data:
+  mongo-data:
 # Usage:
 #   docker compose -f mongodb.yml up -d
 #   docker compose -f mongodb.yml down

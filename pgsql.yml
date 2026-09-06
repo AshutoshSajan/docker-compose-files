@@ -12,7 +12,9 @@ services:
     networks:
       - turreta_network
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # NOTE: Postgres 18+ requires the mount at /var/lib/postgresql (parent);
+      # older majors then use the .../data subdir automatically.
+      - pgsql-data:/var/lib/postgresql
       # Put *.sql / *.sh files in ./sql_scripts to seed the DB on first start.
       - ./sql_scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
@@ -46,7 +48,7 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:
+  pgsql-data:
     driver: local
   pgadmin-data:
     driver: local

@@ -10,7 +10,8 @@ services:
     ports:
       - '${BITNAMI_POSTGRES_PORT:-5433}:5432'
     volumes:
-      - 'postgresql_data:/var/lib/postgresql/data'
+      # Parent mount: required by Postgres 18+, older majors use .../data inside it.
+      - 'postgresql-data:/var/lib/postgresql'
     environment:
       - 'POSTGRES_USER=${POSTGRES_USER:-admin}'
       - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}'
@@ -40,7 +41,7 @@ services:
         condition: service_healthy
 
 volumes:
-  postgresql_data:
+  postgresql-data:
     driver: local
   pgadmin-data:
     driver: local
