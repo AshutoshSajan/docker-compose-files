@@ -75,7 +75,8 @@ make backup-valkey              # → dump/valkey-<timestamp>.rdb (BGSAVE)
 make backup-pgsql ENV=acme      # same, with project env
 ```
 
-Restore is deliberately manual (destructive — check twice):
+Restore is deliberately manual (destructive — check twice). CI verifies the
+Postgres roundtrip (backup → wipe → restore → marker row) on every push:
 
 ```bash
 # Postgres:  docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres < dump/pgsql-<ts>.sql
@@ -83,6 +84,32 @@ Restore is deliberately manual (destructive — check twice):
 # MongoDB:   docker compose -f mongodb.yml exec -T mongo mongorestore -u root -p changeme --authenticationDatabase admin --gzip --archive=/tmp/x.archive.gz
 # Redis:     stop, replace /data/dump.rdb in the redis_data volume, start
 ```
+
+## Disk cleanup
+
+Images pile up fast with this repo. Safe first, destructive last:
+
+```bash
+docker system df               # what's eating disk
+make clean-<svc>               # stop a stack AND delete its volumes (scoped, safe)
+docker image prune             # dangling images only (safe)
+docker image prune -a          # all unused images (re-pulled on demand; running stacks kept)
+docker container prune         # stopped containers
+docker network prune           # unused networks
+docker builder prune           # build cache
+docker system prune            # all of the above at once (never touches volumes)
+```
+
+DANGER — deletes data, no undo:
+
+```bash
+docker volume ls                             # inspect first
+docker volume prune                          # ALL unattached volumes
+docker compose -f <file>.yml down -v         # same as make clean-<svc>
+```
+
+Rules of thumb: `make down-<svc>` keeps volumes (data survives restarts);
+back up first (`make backup-<svc>`) before anything with `-v` or prune.
 
 ## Web GUIs for every tool
 
@@ -448,6 +475,16 @@ docker compose -f kafka-gui.yml up -d
 * Defaults in `.env.example` are for local dev only — change them.
 * ES `xpack.security.enabled=false` and Redis/Mongo/ES open ports are dev-only.
 * For shared/staging use Docker secrets (`*_FILE`) and enable TLS/auth.
+
+## Troubleshooting
+
+* Kafka brokers refuse to start with `Invalid cluster.id in meta.properties`:
+  ZK and broker volumes diverged (one was reset without the other — these
+  must always be reset together). Wipe and start fresh:
+  `make clean-kafka-gui` (or `clean-zookeeper-kafka`), then `up` again.
+  Your topics are test data; re-seeding runs automatically.
+* Image pull fails with snapshot/overlayfs errors: usually disk pressure —
+  see Disk cleanup above, then retry the pull.
 
 ## License
 
