@@ -252,6 +252,14 @@ docker build --build-arg JENKINS_VERSION=2.555.3-lts-jdk21 .
 > Major-version downgrades (e.g. Postgres 18 → 17) need a fresh volume:
 > `docker compose -f pgsql.yml down -v` before switching.
 
+## Keeping versions fresh
+
+Version lines in `.env.example` tagged `# renovate: …` are auto-updated by
+[Renovate](https://docs.renovatebot.com) (`renovate.json`, one grouped PR).
+Enable it via the Renovate GitHub App (or self-hosted) — the `validate`
+workflow smoke-tests every bump. The Jenkins image in `Dockerfile`
+(`ARG JENKINS_VERSION`) is covered by Renovate's built-in dockerfile manager.
+
 ## Index
 
 | File | Service(s) | Default ports | Notes |
