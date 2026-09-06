@@ -107,6 +107,110 @@ No GUI: `nginx` (is itself a web server), `julia` (REPL), `tigerbeetle`
 (no official web UI). GUI image versions/ports are `.env` vars
 (`PGADMIN_VERSION`, `PHPMYADMIN_PORT`, …).
 
+## GUI directory — install permanently
+
+✅ = one-command setup already wired in this repo (`GUI=1 make up-<svc>`).
+Everything else you can install yourself via the links.
+
+### PostgreSQL
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| pgAdmin 4 ✅ | web | [pgadmin-org/pgadmin4](https://github.com/pgadmin-org/pgadmin4) | [pgadmin.org](https://www.pgadmin.org) | official, most complete |
+| DBeaver | desktop | [dbeaver/dbeaver](https://github.com/dbeaver/dbeaver) | [dbeaver.io](https://dbeaver.io) | universal client (also MySQL/Mongo/Cassandra/…) |
+| DataGrip | desktop | — | [jetbrains.com/datagrip](https://www.jetbrains.com/datagrip) | paid JetBrains IDE |
+| TablePlus | desktop | — | [tableplus.com](https://tableplus.com) | paid, fast native client |
+| Beekeeper Studio | desktop | [beekeeper-studio/beekeeper-studio](https://github.com/beekeeper-studio/beekeeper-studio) | [beekeeperstudio.io](https://www.beekeeperstudio.io) | OSS, clean UI |
+| DbGate | web/desktop | [dbgate/dbgate](https://github.com/dbgate/dbgate) | [dbgate.org](https://dbgate.org) | OSS, runs in browser too |
+| Postico | desktop | — | [eggerapps.at/postico](https://eggerapps.at/postico/) | Mac-only, PG-focused |
+
+### MySQL
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| phpMyAdmin ✅ | web | [phpmyadmin/phpmyadmin](https://github.com/phpmyadmin/phpmyadmin) | [phpmyadmin.net](https://www.phpmyadmin.net) | classic, PHP |
+| Adminer | web | [vrana/adminer](https://github.com/vrana/adminer) | [adminer.org](https://www.adminer.org) | single PHP file |
+| MySQL Workbench | desktop | — | [dev.mysql.com/workbench](https://dev.mysql.com/workbench/) | official Oracle tool |
+| HeidiSQL | desktop | [HeidiSQL/HeidiSQL](https://github.com/HeidiSQL/HeidiSQL) | [heidisql.com](https://www.heidisql.com) | Windows-first, free |
+| DBeaver / TablePlus / Beekeeper | desktop | see PostgreSQL | see PostgreSQL | same apps, MySQL included |
+
+### MongoDB
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| mongo-express ✅ | web | [mongo-express/mongo-express](https://github.com/mongo-express/mongo-express) | — | lightweight, matches this repo |
+| Compass | desktop | [mongodb-js/compass](https://github.com/mongodb-js/compass) | [mongodb.com/try/download/compass](https://www.mongodb.com/try/download/compass) | official, free |
+| Studio 3T | desktop | — | [studio3t.com](https://studio3t.com) | paid, power-user features |
+| NoSQLBooster | desktop | — | [nosqlbooster.com](https://nosqlbooster.com) | paid, SQL-to-MQL helper |
+
+### Redis
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| redis-commander ✅ | web | [joeferner/redis-commander](https://github.com/joeferner/redis-commander) | — | lightweight, matches this repo |
+| RedisInsight | desktop/docker | [redis/RedisInsight](https://github.com/redis/RedisInsight) | [redis.io/insight](https://redis.io/insight/) | official, free (`redis/redisinsight` image) |
+| Another Redis Desktop Manager | desktop | [qishibo/AnotherRedisDesktopManager](https://github.com/qishibo/AnotherRedisDesktopManager) | — | OSS, fast |
+| RESP.app | desktop | — | [resp.app](https://resp.app) | paid (ex Redis Desktop Manager) |
+
+### RabbitMQ
+
+Built-in management UI ✅ (this repo's image ships it on `:15672`) —
+[docs](https://www.rabbitmq.com/docs/management). No third-party GUI needed.
+
+### Kafka
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| kafka-ui ✅ | web | [kafbat/kafka-ui](https://github.com/kafbat/kafka-ui) | [kafbat.io](https://kafbat.io) | see migration note below |
+| AKHQ | web | [tchiotludo/akhq](https://github.com/tchiotludo/akhq) | [akhq.io](https://akhq.io) | Kafka + Schema Registry + Connect |
+| Kafdrop | web | [obsidiandynamics/kafdrop](https://github.com/obsidiandynamics/kafdrop) | — | minimal topic/message browser |
+| Redpanda Console | web | [redpanda-data/console](https://github.com/redpanda-data/console) | [redpanda.com](https://www.redpanda.com) | ex-Kowl, works with any Kafka |
+| Conduktor | desktop/platform | — | [conduktor.io](https://www.conduktor.io) | free desktop + paid platform |
+
+> Provectus paused `provectuslabs/kafka-ui` in 2023; the active
+> community fork is **Kafbat UI** (`ghcr.io/kafbat/kafka-ui`, same config
+> keys) — prefer it for permanent installs.
+
+### Elasticsearch
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| Kibana ✅ | web | [elastic/kibana](https://github.com/elastic/kibana) | [elastic.co/kibana](https://www.elastic.co/kibana) | official, full power |
+| Elasticvue | desktop/ext/docker | [cars10/elasticvue](https://github.com/cars10/elasticvue) | [elasticvue.com](https://elasticvue.com) | lightweight document browser |
+| Cerebro | web | [lmenezes/cerebro](https://github.com/lmenezes/cerebro) | — | cluster admin, aging (2021 release) |
+
+### Cassandra
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| Reaper ✅ | web | [thelastpickle/cassandra-reaper](https://github.com/thelastpickle/cassandra-reaper) | [cassandra-reaper.io](https://cassandra-reaper.io) | repairs (this repo's pick) |
+| Grafana ✅ | web | [grafana/grafana](https://github.com/grafana/grafana) | [grafana.com](https://grafana.com) | metrics dashboards |
+| DBeaver | desktop | see PostgreSQL | see PostgreSQL | CQL via JDBC driver |
+
+### Nginx
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| Nginx Proxy Manager | web | [NginxProxyManager/nginx-proxy-manager](https://github.com/NginxProxyManager/nginx-proxy-manager) | [nginxproxymanager.com](https://nginxproxymanager.com) | reverse-proxy + Let's Encrypt UI |
+| nginxconfig.io | generator | [digitalocean/nginxconfig.io](https://github.com/digitalocean/nginxconfig.io) | [nginxconfig.io](https://www.nginxconfig.io) | generates tuned configs |
+
+### TigerBeetle
+
+No widely-adopted GUI — operate via CLI +
+[docs](https://tigerbeetle.com).
+
+### Julia
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| Pluto.jl | notebook | [fonsp/Pluto.jl](https://github.com/fonsp/Pluto.jl) | [plutojl.org](https://plutojl.org) | reactive notebooks, `] add Pluto` |
+| Jupyter + IJulia | notebook | [JuliaInterop/IJulia.jl](https://github.com/JuliaInterop/IJulia.jl) | [jupyter.org](https://jupyter.org) | classic notebooks |
+
+### Jenkins / Prometheus
+
+Jenkins *is* its own GUI (Blue Ocean is deprecated — this repo
+intentionally doesn't install it). For Prometheus the GUI is Grafana ✅.
+
 ## Switching versions
 
 Every image tag is a variable with a latest-stable default — no file editing needed:
