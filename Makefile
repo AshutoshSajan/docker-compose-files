@@ -13,10 +13,10 @@ SERVICES := cassandra clickhouse elastic-search julia kafka kafka-gui \
 # command follows $(RUN).
 # Prefix with GUI=1 to include the opt-in 'gui' profile (web UIs).
 ENV_SETUP = e=".env"; [ -n "$(ENV)" ] && e=".env.$(ENV)"; if [ ! -f "$$e" ]; then if [ -n "$(ENV)" ]; then echo "Missing env file $$e - create it with: make env-$(ENV)"; exit 1; fi; cp .env.example .env; echo "Created .env from .env.example - edit it to switch versions/passwords."; fi; f="$*.yml"; [ -f "$$f" ] || f="$*.yaml"; [ -f "$$f" ] || { echo "Unknown service '$*'. Try: make list"; exit 1; }
-RUN = $(ENV_SETUP); docker compose --env-file "$$e" $${GUI:+--profile gui} -f "$$f"
+RUN = $(ENV_SETUP); docker compose --env-file "$$e" -p "$*" $${GUI:+--profile gui} -f "$$f"
 # Same, but always covering the gui profile: stop/clean/inspect act on the
 # whole stack so GUI containers are never left orphaned.
-RUN_ALL = $(ENV_SETUP); docker compose --env-file "$$e" --profile gui -f "$$f"
+RUN_ALL = $(ENV_SETUP); docker compose --env-file "$$e" -p "$*" --profile gui -f "$$f"
 
 .DEFAULT_GOAL := help
 
@@ -44,7 +44,7 @@ list: ## List available services
 ps-all: ## Show running containers for all stacks
 	@e=".env"; [ -n "$(ENV)" ] && e=".env.$(ENV)"; [ -f "$$e" ] || e=".env.example"; for s in $(SERVICES); do \
 	  f="$$s.yml"; [ -f "$$f" ] || f="$$s.yaml"; \
-	  echo "=== $$s ==="; docker compose --env-file "$$e" -f "$$f" ps; \
+	  echo "=== $$s ==="; docker compose --env-file "$$e" -p "$$s" -f "$$f" ps; \
 	done
 
 up-%: ## Start a service detached: make up-redis
@@ -81,21 +81,21 @@ backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis/valkey): make backup-pg
 	[ -f "$$f" ] || { echo "Unknown service '$*'. Try: make list"; exit 1; }; \
 	set -a; . "./$$e"; set +a; ts=$$(date +%Y%m%d-%H%M%S); \
 	case "$*" in \
-	  pgsql) docker compose --env-file "$$e" -f "$$f" exec -T postgresql-db pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/pgsql-$$ts.sql" ;; \
-	  postgres-alt) docker compose --env-file "$$e" -f "$$f" exec -T postgresql pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/postgres-alt-$$ts.sql" ;; \
-	  mysql) docker compose --env-file "$$e" -f "$$f" exec -T db mysqldump -h localhost -u root --password="$${MYSQL_ROOT_PASSWORD:-changeme-root}" --all-databases > "dump/mysql-$$ts.sql" ;; \
-	  mongodb) cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q mongo); \
-	    docker compose --env-file "$$e" -f "$$f" exec -T mongo mongodump -u "$${MONGO_ROOT_USER:-root}" -p "$${MONGO_ROOT_PASSWORD:-changeme}" --authenticationDatabase admin --archive=/tmp/mdump.archive --gzip && \
+	  pgsql) docker compose --env-file "$e" -p "$*" -f "$f" exec -T postgresql-db pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/pgsql-$$ts.sql" ;; \
+	  postgres-alt) docker compose --env-file "$e" -p "$*" -f "$f" exec -T postgresql pg_dump -U "$${POSTGRES_USER:-admin}" -d "$${POSTGRES_DB:-postgres}" > "dump/postgres-alt-$$ts.sql" ;; \
+	  mysql) docker compose --env-file "$e" -p "$*" -f "$f" exec -T db mysqldump -h localhost -u root --password="$${MYSQL_ROOT_PASSWORD:-changeme-root}" --all-databases > "dump/mysql-$$ts.sql" ;; \
+	  mongodb) cid=$$(docker compose --env-file "$e" -p "$*" -f "$f" ps -q mongo); \
+	    docker compose --env-file "$e" -p "$*" -f "$f" exec -T mongo mongodump -u "$${MONGO_ROOT_USER:-root}" -p "$${MONGO_ROOT_PASSWORD:-changeme}" --authenticationDatabase admin --archive=/tmp/mdump.archive --gzip && \
 	    docker cp "$$cid:/tmp/mdump.archive" "dump/mongodb-$$ts.archive.gz" && \
-	    docker compose --env-file "$$e" -f "$$f" exec -T mongo rm /tmp/mdump.archive ;; \
-  redis) docker compose --env-file "$$e" -f "$$f" exec -T redis redis-cli -a "$${REDIS_PASSWORD:-changeme}" BGSAVE; sleep 3; \
-    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis); \
+	    docker compose --env-file "$e" -p "$*" -f "$f" exec -T mongo rm /tmp/mdump.archive ;; \
+  redis) docker compose --env-file "$e" -p "$*" -f "$f" exec -T redis redis-cli -a "$${REDIS_PASSWORD:-changeme}" BGSAVE; sleep 3; \
+    cid=$$(docker compose --env-file "$e" -p "$*" -f "$f" ps -q redis); \
     docker cp "$$cid:/data/dump.rdb" "dump/redis-$$ts.rdb" ;; \
-  valkey) docker compose --env-file "$$e" -f "$$f" exec -T valkey valkey-cli -a "$${VALKEY_PASSWORD:-changeme}" BGSAVE; sleep 3; \
-    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q valkey); \
+  valkey) docker compose --env-file "$e" -p "$*" -f "$f" exec -T valkey valkey-cli -a "$${VALKEY_PASSWORD:-changeme}" BGSAVE; sleep 3; \
+    cid=$$(docker compose --env-file "$e" -p "$*" -f "$f" ps -q valkey); \
     docker cp "$$cid:/data/dump.rdb" "dump/valkey-$$ts.rdb" ;; \
-	  redis-master-replica) docker compose --env-file "$$e" -f "$$f" exec -T redis-master redis-cli -a "$${REDIS_MASTER_PASSWORD:-changeme-master}" BGSAVE; sleep 3; \
-	    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis-master); \
+	  redis-master-replica) docker compose --env-file "$e" -p "$*" -f "$f" exec -T redis-master redis-cli -a "$${REDIS_MASTER_PASSWORD:-changeme-master}" BGSAVE; sleep 3; \
+	    cid=$$(docker compose --env-file "$e" -p "$*" -f "$f" ps -q redis-master); \
 	    docker cp "$$cid:/data/dump.rdb" "dump/redis-master-$$ts.rdb" ;; \
 	  *) echo "No backup defined for '$*'. Supported: pgsql postgres-alt mysql mongodb redis redis-master-replica valkey"; exit 1 ;; \
 	esac; ls -la dump/ | tail -n +2

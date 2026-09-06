@@ -41,6 +41,12 @@ make config-nginx    # validate + print resolved config
 `.env` is auto-created from `.env.example` on first run.
 Per-invocation overrides work too: `REDIS_VERSION=7.4 make up-redis`.
 
+Every stack runs as its own compose project (`-p <service>`), so stacks get
+separate networks and volume prefixes and never see each other's containers.
+If you ran these files before this change, stop the old shared project once
+(`docker compose -f <file>.yml down`) and drop its orphaned volumes
+(`docker volume ls | grep docker-compose-files`).
+
 ## Per-project environments
 
 One checkout, many projects — keep a separate env file per project:
