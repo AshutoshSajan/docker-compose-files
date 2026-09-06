@@ -54,14 +54,15 @@ jobs:
       - name: Boot core stacks and probe them
         run: |
           wait_healthy() {
-            file="$1"; svc="$2"; tries="${3:-60}"
-            id="$(docker compose -f "$file" ps -q "$svc")"
+            file="$1"; svc="$2"; tries="${3:-60}"; shift 3 || true
+            # any remaining args are extra compose flags (e.g. --profile gui)
+            id="$(docker compose "$@" -f "$file" ps -q "$svc")"
             for _ in $(seq 1 "$tries"); do
               [ "$(docker inspect "$id" --format '{{.State.Health.Status}}')" = healthy ] && return 0
               sleep 5
             done
             echo "TIMEOUT waiting for $svc ($file) to become healthy"
-            docker compose -f "$file" logs --tail=30 "$svc"
+            docker compose "$@" -f "$file" logs --tail=30 "$svc"
             return 1
           }
 
@@ -69,6 +70,7 @@ jobs:
           docker compose --profile gui -f redis.yml up -d
           wait_healthy redis.yml redis 36
           docker compose -f redis.yml exec -T redis redis-cli -a changeme ping | grep -q PONG
+          wait_healthy redis.yml redis-commander 36 --profile gui
           curl -sf -o /dev/null http://localhost:8084/
           docker compose --profile gui -f redis.yml down -v
 
