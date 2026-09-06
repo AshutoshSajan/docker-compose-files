@@ -65,6 +65,7 @@ make backup-mysql               # → dump/mysql-<timestamp>.sql (all DBs)
 make backup-mongodb             # → dump/mongodb-<timestamp>.archive.gz
 make backup-redis               # → dump/redis-<timestamp>.rdb (BGSAVE)
 make backup-redis-master-replica
+make backup-valkey              # → dump/valkey-<timestamp>.rdb (BGSAVE)
 make backup-pgsql ENV=acme      # same, with project env
 ```
 
@@ -95,12 +96,18 @@ Raw compose equivalent: `docker compose -f redis.yml --profile gui up -d`.
 | `pgsql.yml` / `postgres-alt.yml` | pgAdmin 4 | :5050 | `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` |
 | `mysql.yml` | phpMyAdmin | :8081 | MySQL user from `.env` |
 | `mongodb.yml` | mongo-express | :8082 | `MONGO_EXPRESS_USER` / `MONGO_EXPRESS_PASSWORD` |
-| `redis.yml` / `redis-master-replica.yml` | redis-commander | :8084 | no login (local dev) |
+| `redis.yml` / `redis-master-replica.yml` / `valkey.yml` | redis-commander | :8084 / :8084 / :8086 | no login (local dev) |
 | `rabbitmq.yml` | Management UI (built in) | :15672 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` |
 | `kafka.yml` / `zookeeper-kafka.yml` | kafka-ui | :8080 | no login |
 | `kafka-gui.yml` | kafka-ui (always on) | :8080 | no login |
 | `elastic-search.yml` | Kibana | :5601 | no login (security disabled, dev only) |
 | `cassandra.yml` | Reaper + Grafana + Prometheus | :8080 / :3000 / :9090 | `GRAFANA_USER` / `GRAFANA_PASSWORD` |
+| `observability.yml` | Grafana (pre-wired to Prometheus) | :3000 | `GRAFANA_USER` / `GRAFANA_PASSWORD` |
+| `clickhouse.yml` | Playground (built in) | :8123 | `CLICKHOUSE_USER` / `CLICKHOUSE_PASSWORD` |
+| `minio.yml` | Console (built in) | :9001 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` |
+| `mailpit.yml` | Web UI (built in) | :8025 | no login |
+| `meilisearch.yml` | Dashboard (built in) | :7700 | `MEILI_MASTER_KEY` |
+| `nats.yml` | Monitoring endpoint (JSON, no full UI) | :8222 | no login |
 | Jenkins (`Dockerfile`) | Jenkins itself | :8080 | set on first boot |
 
 No GUI: `nginx` (is itself a web server), `julia` (REPL), `tigerbeetle`
@@ -152,6 +159,8 @@ Everything else you can install yourself via the links.
 | Another Redis Desktop Manager | desktop | [qishibo/AnotherRedisDesktopManager](https://github.com/qishibo/AnotherRedisDesktopManager) | — | OSS, fast |
 | RESP.app | desktop | — | [resp.app](https://resp.app) | paid (ex Redis Desktop Manager) |
 
+Any Redis GUI above also works against Valkey (`valkey.yml`) — same protocol.
+
 ### RabbitMQ
 
 Built-in management UI ✅ (this repo's image ships it on `:15672`) —
@@ -186,6 +195,26 @@ Built-in management UI ✅ (this repo's image ships it on `:15672`) —
 | Reaper ✅ | web | [thelastpickle/cassandra-reaper](https://github.com/thelastpickle/cassandra-reaper) | [cassandra-reaper.io](https://cassandra-reaper.io) | repairs (this repo's pick) |
 | Grafana ✅ | web | [grafana/grafana](https://github.com/grafana/grafana) | [grafana.com](https://grafana.com) | metrics dashboards |
 | DBeaver | desktop | see PostgreSQL | see PostgreSQL | CQL via JDBC driver |
+
+### ClickHouse
+
+Playground is built in (`clickhouse.yml` `:8123`). For permanent installs:
+
+| GUI | Type | GitHub | Website | Notes |
+|---|---|---|---|---|
+| Tabix | web | [tabixio/tabix](https://github.com/tabixio/tabix) | [tabix.io](https://tabix.io) | lightweight, free |
+| DBeaver / DataGrip / TablePlus | desktop | see PostgreSQL | see PostgreSQL | all speak ClickHouse |
+
+### NATS
+
+No full GUI — the built-in monitoring endpoint (`nats.yml` `:8222`,
+`/connz` `/varz` `/jsz`) plus the official CLI
+([nats-io/natscli](https://github.com/nats-io/natscli)) cover daily use.
+
+### MinIO / Mailpit / Meilisearch
+
+All three ship their UI in the box (`minio.yml` `:9001`,
+`mailpit.yml` `:8025`, `meilisearch.yml` `:7700`) — nothing to install.
 
 ### Nginx
 
@@ -262,23 +291,72 @@ workflow smoke-tests every bump. The Jenkins image in `Dockerfile`
 
 ## Index
 
+### Relational databases
+
 | File | Service(s) | Default ports | Notes |
 |---|---|---|---|
 | `pgsql.yml` | Postgres `${POSTGRES_VERSION:-18}` | 5432 | `POSTGRES_*` in `.env`, seeds from `./sql_scripts`, healthcheck `pg_isready` |
 | `postgres-alt.yml` | Postgres `${POSTGRES_VERSION:-18}` | 5433 | Second instance; pick one of the two pg files |
 | `mysql.yml` | MySQL `${MYSQL_VERSION:-9}` LTS | 3306 | Non-root `MYSQL_USER`, `mysqladmin ping` healthcheck |
+
+### NoSQL / cache
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
 | `mongodb.yml` | MongoDB `${MONGO_VERSION:-8}` | 27017 | Persistent `mongo-data` + root auth + `mongosh ping` |
 | `redis.yml` | Redis `${REDIS_VERSION:-8}` | 6379 | Password required by default, `FLUSHDB/FLUSHALL` disabled |
 | `redis-master-replica.yml` | Redis master + replica | 6379, 6380 | Named volumes (no placeholder paths), replica waits for healthy master |
+| `valkey.yml` | Valkey `${VALKEY_VERSION:-8}` (Redis fork) | 6381 | Same password/commander setup as `redis.yml` |
+| `cassandra.yml` | Cassandra `${CASSANDRA_VERSION:-5.0}` | 9042 | `cqlsh`/`nodetool` via `--profile tools`, Reaper/Prom/Grafana via `--profile observability` |
+| `tigerbeetle.yaml` | TigerBeetle 3-node (host net, Linux) | 3001-3003 | Run `--profile format` once before `up` |
+
+### Analytics
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
+| `clickhouse.yml` | ClickHouse `${CLICKHOUSE_VERSION:-26.3}` | 8123, 9000 | `CLICKHOUSE_*` in `.env`, playground UI built in, `clickhouse-client` healthcheck |
+
+### Messaging & streaming
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
 | `rabbitmq.yml` | RabbitMQ `${RABBITMQ_VERSION:-4.3-management}` (mgmt) | 5672, 15672 | `RABBITMQ_*` in `.env`, `rabbitmq-diagnostics ping` |
 | `kafka.yml` | Kafka `${KAFKA_VERSION:-4.3.1}` KRaft (no ZK) | 9094 host | Single broker, no `docker.sock` mount |
 | `zookeeper-kafka.yml` | Kafka + Zookeeper (Confluent `${CONFLUENT_VERSION:-7.9.9}`) | 9092 | Minimal Confluent example with `cub` healthchecks + volumes |
 | `kafka-gui.yml` | 2x Kafka + ZK + Schema Registry + Connect + kafka-ui | 8080, 9092-9093, 8083, 8085 | Confluent images share `${CONFLUENT_VERSION:-7.9.9}`; seeds from `./kafka-seeds/message.json` |
+| `nats.yml` | NATS `${NATS_VERSION:-2}` + JetStream | 4222, 8222 | No healthcheck (scratch image); monitoring endpoint built in |
+
+### Search
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
 | `elastic-search.yml` | ES `${ES_VERSION:-9.5.3}` 3-node | 9200 | Security disabled for local dev only; Kibana via `gui` profile |
-| `cassandra.yml` | Cassandra `${CASSANDRA_VERSION:-5.0}` | 9042 | `cqlsh`/`nodetool` via `--profile tools`, Reaper/Prom/Grafana via `--profile observability` |
-| `tigerbeetle.yaml` | TigerBeetle 3-node (host net, Linux) | 3001-3003 | Run `--profile format` once before `up` |
-| `nginx.yml` | Nginx `${NGINX_VERSION:-1.30-alpine}` (stable) | 80, 443 | Example `./nginx/{html,conf.d}` mounts commented in-file |
+| `meilisearch.yml` | Meilisearch `${MEILI_VERSION:-v1}` | 7700 | `MEILI_MASTER_KEY` in `.env`, dashboard built in |
+
+### Storage
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
+| `minio.yml` | MinIO `${MINIO_VERSION:-RELEASE.2025-09-07T16-13-09Z}` (S3 API) | 9000, 9001 | `MINIO_ROOT_*` in `.env`, console built in |
+
+### Observability
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
+| `observability.yml` | Prometheus + Grafana | 9090, 3000 | Grafana pre-wired to Prometheus; add targets in `./observability/prometheus.yml` |
+
+### Dev tools
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
+| `mailpit.yml` | Mailpit `${MAILPIT_VERSION:-v1.31}` (email testing) | 1025, 8025 | In-memory by default; persistence commented in-file |
 | `julia.yml` | Julia `${JULIA_VERSION:-1.12}` REPL | 7777 | Workdir `/work` mounted from `./julia-work` |
+
+### Web & CI
+
+| File | Service(s) | Default ports | Notes |
+|---|---|---|---|
+| `nginx.yml` | Nginx `${NGINX_VERSION:-1.30-alpine}` (stable) | 80, 443 | Example `./nginx/{html,conf.d}` mounts commented in-file |
 | `Dockerfile` | Jenkins `${JENKINS_VERSION:-2.555.3-lts-jdk21}` + docker-cli | — | No deprecated Blue Ocean; cleaned apt layers |
 
 ## Host ports
@@ -296,7 +374,9 @@ Every published port and the `.env` var that moves it (`—` = fixed):
 | 8082 | mongo-express | `MONGO_EXPRESS_PORT` |
 | 6379 | `redis.yml` / `redis-master-replica.yml` master | `REDIS_PORT` / `REDIS_MASTER_PORT` |
 | 6380 | replica | `REDIS_REPLICA_PORT` |
+| 6381 | `valkey.yml` | `VALKEY_PORT` |
 | 8084 | redis-commander (both redis files) | `REDIS_COMMANDER_PORT` |
+| 8086 | redis-commander (valkey) | `VALKEY_COMMANDER_PORT` |
 | 5672, 15672 | `rabbitmq.yml` | `RABBITMQ_AMQP_PORT`, `RABBITMQ_MGMT_PORT` |
 | 9094 | `kafka.yml` | `KAFKA_PORT` |
 | 9092 | `zookeeper-kafka.yml` | `KAFKA_PORT` |
@@ -306,6 +386,12 @@ Every published port and the `.env` var that moves it (`—` = fixed):
 | 9200 | `elastic-search.yml` | `ES_PORT` |
 | 5601 | Kibana | `KIBANA_PORT` |
 | 9042 | `cassandra.yml` | `CASSANDRA_PORT` |
+| 8123, 9000 | `clickhouse.yml` (HTTP, native) | `CLICKHOUSE_HTTP_PORT`, `CLICKHOUSE_NATIVE_PORT` |
+| 4222, 8222 | `nats.yml` (client, monitoring) | `NATS_PORT`, `NATS_HTTP_PORT` |
+| 9000, 9001 | `minio.yml` (API, console) | `MINIO_API_PORT`, `MINIO_CONSOLE_PORT` |
+| 1025, 8025 | `mailpit.yml` (SMTP, UI) | `MAILPIT_SMTP_PORT`, `MAILPIT_HTTP_PORT` |
+| 7700 | `meilisearch.yml` | `MEILI_PORT` |
+| 9090, 3000 | `observability.yml` (Prometheus, Grafana) | `PROM_PORT`, `GRAFANA_PORT` |
 | 8081, 9090, 3000 | Reaper-internal, Prometheus, Grafana | — (`REAPER_PORT` for the UI) |
 | 3001–3003 | `tigerbeetle.yaml` (host net) | — |
 | 80, 443 | `nginx.yml` | `NGINX_HTTP_PORT`, `NGINX_HTTPS_PORT` |
@@ -313,7 +399,8 @@ Every published port and the `.env` var that moves it (`—` = fixed):
 
 Known overlaps when running several stacks at once: pgAdmin `:5050`
 (both pg files), kafka-ui `:8080` (all three Kafka files + Reaper),
-redis-commander `:8084` (both redis files) — override per stack via
+redis-commander `:8084` (both redis files), Prometheus `:9090` / Grafana
+`:3000` (`cassandra.yml` vs `observability.yml`) — override per stack via
 `ENV=<name>` or one-off `VAR=port make …`.
 
 ## Conventions applied to every file

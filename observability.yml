@@ -1,0 +1,43 @@
+services:
+  prometheus:
+    image: prom/prometheus:${PROM_VERSION:-v3.14.0}
+    restart: unless-stopped
+    ports:
+      - '${PROM_PORT:-9090}:9090'
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9090/-/healthy']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-13.2}
+    restart: unless-stopped
+    ports:
+      - '${GRAFANA_PORT:-3000}:3000'
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
+    volumes:
+      - grafana-obs-data:/var/lib/grafana
+      - ./observability/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  # Grafana at :3000 comes pre-wired to Prometheus (see observability/).
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-obs-data:
+    driver: local

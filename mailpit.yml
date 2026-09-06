@@ -1,0 +1,18 @@
+services:
+  mailpit:
+    image: axllent/mailpit:${MAILPIT_VERSION:-v1.31}
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '${MAILPIT_HTTP_PORT:-8025}:8025'
+    # Mail is kept in memory by default. Persist via an mbox file + volume:
+    # environment:
+    #   MP_DATA_FILE: /data/mailpit.mbox
+    #   MP_MAX_MESSAGES: ${MAILPIT_MAX_MESSAGES:-500}
+    # volumes:
+    #   - 'mailpit-data:/data'
+    # No healthcheck: the image ships no shell/HTTP client. UI at :8025.
+
+# volumes:
+#   mailpit-data:
+#     driver: local

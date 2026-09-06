@@ -2,9 +2,10 @@
 # Usage: make up-redis | make logs-pgsql | make down-kafka | make config-mysql
 # Version/secret overrides live in .env (auto-created from .env.example).
 
-SERVICES := cassandra elastic-search julia kafka kafka-gui \
-	mongodb mysql nginx pgsql postgres-alt rabbitmq redis redis-master-replica \
-	tigerbeetle zookeeper-kafka
+SERVICES := cassandra clickhouse elastic-search julia kafka kafka-gui \
+	mailpit meilisearch minio mongodb mysql nats nginx observability pgsql postgres-alt \
+	rabbitmq redis redis-master-replica tigerbeetle valkey \
+	zookeeper-kafka
 
 # Single-line helper (must stay on one line: each recipe line is its own shell).
 # Resolves "<name>.yml" or "<name>.yaml" and the env file (.env by default,
@@ -73,7 +74,7 @@ config-%: ## Validate + print resolved config: make config-pgsql
 env-%: ## Create .env.<name> from template: make env-acme
 	@if [ -f ".env.$*" ]; then echo ".env.$* already exists"; else cp .env.example ".env.$*"; echo "Created .env.$* - edit versions/passwords, then use ENV=$*."; fi
 
-backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis): make backup-pgsql
+backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis/valkey): make backup-pgsql
 	@mkdir -p dump; e=".env"; [ -n "$(ENV)" ] && e=".env.$(ENV)"; \
 	[ -f "$$e" ] || { echo "Missing env file $$e"; exit 1; }; \
 	f="$*.yml"; [ -f "$$f" ] || f="$*.yaml"; \
@@ -87,11 +88,14 @@ backup-%: ## Dump data into ./dump (pg/mysql/mongo/redis): make backup-pgsql
 	    docker compose --env-file "$$e" -f "$$f" exec -T mongo mongodump -u "$${MONGO_ROOT_USER:-root}" -p "$${MONGO_ROOT_PASSWORD:-changeme}" --authenticationDatabase admin --archive=/tmp/mdump.archive --gzip && \
 	    docker cp "$$cid:/tmp/mdump.archive" "dump/mongodb-$$ts.archive.gz" && \
 	    docker compose --env-file "$$e" -f "$$f" exec -T mongo rm /tmp/mdump.archive ;; \
-	  redis) docker compose --env-file "$$e" -f "$$f" exec -T redis redis-cli -a "$${REDIS_PASSWORD:-changeme}" BGSAVE; sleep 3; \
-	    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis); \
-	    docker cp "$$cid:/data/dump.rdb" "dump/redis-$$ts.rdb" ;; \
+  redis) docker compose --env-file "$$e" -f "$$f" exec -T redis redis-cli -a "$${REDIS_PASSWORD:-changeme}" BGSAVE; sleep 3; \
+    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis); \
+    docker cp "$$cid:/data/dump.rdb" "dump/redis-$$ts.rdb" ;; \
+  valkey) docker compose --env-file "$$e" -f "$$f" exec -T valkey valkey-cli -a "$${VALKEY_PASSWORD:-changeme}" BGSAVE; sleep 3; \
+    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q valkey); \
+    docker cp "$$cid:/data/dump.rdb" "dump/valkey-$$ts.rdb" ;; \
 	  redis-master-replica) docker compose --env-file "$$e" -f "$$f" exec -T redis-master redis-cli -a "$${REDIS_MASTER_PASSWORD:-changeme-master}" BGSAVE; sleep 3; \
 	    cid=$$(docker compose --env-file "$$e" -f "$$f" ps -q redis-master); \
 	    docker cp "$$cid:/data/dump.rdb" "dump/redis-master-$$ts.rdb" ;; \
-	  *) echo "No backup defined for '$*'. Supported: pgsql postgres-alt mysql mongodb redis redis-master-replica"; exit 1 ;; \
+	  *) echo "No backup defined for '$*'. Supported: pgsql postgres-alt mysql mongodb redis redis-master-replica valkey"; exit 1 ;; \
 	esac; ls -la dump/ | tail -n +2
