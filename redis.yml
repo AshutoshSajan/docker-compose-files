@@ -1,16 +1,36 @@
-version: '3.3'
-
 services:
   redis:
-    image: 'bitnami/redis:7.2'
+    image: 'redis:${REDIS_VERSION:-8}'
     restart: always
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme} --rename-command FLUSHDB "" --rename-command FLUSHALL ""
     ports:
-      - '6379:6379'
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
-      - 'redis_data:/bitnami/redis/data'
+      - 'redis_data:/data'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-changeme}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Web UI (opt-in): docker compose -f redis.yml --profile gui up -d
+  #   or: GUI=1 make up-redis  →  http://localhost:8084
+  redis-commander:
+    image: rediscommander/redis-commander:${REDIS_COMMANDER_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${REDIS_COMMANDER_PORT:-8084}:8081'
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-changeme}
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   redis_data:

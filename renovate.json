@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Group all compose image bumps into one PR",
+      "matchManagers": ["regex"],
+      "groupName": "compose image versions"
+    }
+  ],
+  "regexManagers": [
+    {
+      "description": "Image versions tagged in .env.example (Docker Hub)",
+      "fileMatch": ["^.env.example$"],
+      "matchStrings": [
+        "# renovate: depName=(?<depName>\\S+)\n[A-Z_]+=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "description": "Image versions on custom registries (docker.elastic.co, …)",
+      "fileMatch": ["^.env.example$"],
+      "matchStrings": [
+        "# renovate: depName=(?<depName>\\S+) registryUrl=(?<registryUrl>\\S+)\n[A-Z_]+=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker",
+      "registryUrlTemplate": "{{{registryUrl}}}"
+    }
+  ]
+}

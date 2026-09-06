@@ -1,0 +1,26 @@
+services:
+  meilisearch:
+    image: getmeili/meilisearch:${MEILI_VERSION:-v1}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    ports:
+      - '${MEILI_PORT:-7700}:7700'
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-changeme-master-key}
+      MEILI_ENV: development
+    volumes:
+      - 'meili-data:/meili_data'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:7700/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  # Search dashboard is built in at :7700 (log in with MEILI_MASTER_KEY).
+
+volumes:
+  meili-data:
+    driver: local

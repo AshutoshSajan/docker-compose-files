@@ -1,0 +1,115 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate base configs (no profiles)
+        run: |
+          set -e
+          for f in *.yml *.yaml; do
+            echo "== $f"
+            docker compose -f "$f" config -q
+          done
+
+      - name: Validate opt-in gui profiles
+        run: |
+          set -e
+          for s in pgsql postgres-alt mysql mongodb redis redis-master-replica valkey kafka zookeeper-kafka elastic-search; do
+            echo "== $s (gui)"
+            docker compose --profile gui -f "$s.yml" config -q
+          done
+          echo "== cassandra (tools/observability/gui)"
+          docker compose --profile tools --profile observability --profile gui -f cassandra.yml config -q
+          echo "== tigerbeetle (format)"
+          docker compose --profile format -f tigerbeetle.yaml config -q
+
+      - name: Validate example env file
+        run: docker compose --env-file .env.example -f redis.yml config -q
+
+      - name: Makefile smoke test
+        run: |
+          set -e
+          make help >/dev/null
+          make list
+          make config-redis >/dev/null
+          GUI=1 make config-redis >/dev/null
+          make env-ci-test
+          ENV=ci-test make config-pgsql >/dev/null
+          rm .env.ci-test
+          if make up-nope 2>/dev/null; then echo "expected failure for unknown service"; exit 1; fi
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [compose-config]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Boot core stacks and probe them
+        run: |
+          wait_healthy() {
+            file="$1"; svc="$2"; tries="${3:-60}"; shift 3 || true
+            # any remaining args are extra compose flags (e.g. --profile gui)
+            id="$(docker compose "$@" -f "$file" ps -q "$svc")"
+            for _ in $(seq 1 "$tries"); do
+              [ "$(docker inspect "$id" --format '{{.State.Health.Status}}')" = healthy ] && return 0
+              sleep 5
+            done
+            echo "TIMEOUT waiting for $svc ($file) to become healthy"
+            docker compose "$@" -f "$file" logs --tail=30 "$svc"
+            return 1
+          }
+
+          # Probes retry: a first green healthcheck can still race full
+          # readiness (e.g. mysqld answering ping mid-init then refusing).
+          retry() {
+            tries="$1"; cmd="$2"
+            for _ in $(seq 1 "$tries"); do
+              eval "$cmd" && return 0
+              sleep 5
+            done
+            echo "PROBE FAILED after $tries tries: $cmd"
+            return 1
+          }
+
+          # Redis (+ redis-commander GUI profile)
+          docker compose --profile gui -f redis.yml up -d
+          wait_healthy redis.yml redis 36
+          retry 12 "docker compose -f redis.yml exec -T redis redis-cli -a changeme ping | grep -q PONG"
+          wait_healthy redis.yml redis-commander 36 --profile gui
+          retry 12 "curl -sf -o /dev/null http://localhost:8084/"
+          docker compose --profile gui -f redis.yml down -v
+
+          # Postgres (+ seed script)
+          docker compose -f pgsql.yml up -d
+          wait_healthy pgsql.yml postgresql-db 60
+          retry 12 "docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -tc 'SELECT 1' | grep -q 1"
+          docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -tc 'SELECT COUNT(*) FROM app_health'
+          docker compose -f pgsql.yml down -v
+
+          # Backup → wipe → restore roundtrip (proves backups actually restore)
+          docker compose -f pgsql.yml up -d
+          wait_healthy pgsql.yml postgresql-db 60
+          docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -c "INSERT INTO app_health (status) VALUES ('roundtrip-probe')"
+          docker compose -f pgsql.yml exec -T postgresql-db pg_dump -U admin -d postgres > /tmp/pg-roundtrip.sql
+          grep -q app_health /tmp/pg-roundtrip.sql
+          docker compose -f pgsql.yml down -v
+          docker compose -f pgsql.yml up -d
+          wait_healthy pgsql.yml postgresql-db 60
+          # Fresh init re-seeds an empty table; drop it so the dump's CREATE applies cleanly.
+          docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -c 'DROP TABLE app_health'
+          docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -v ON_ERROR_STOP=1 < /tmp/pg-roundtrip.sql
+          retry 12 "docker compose -f pgsql.yml exec -T postgresql-db psql -U admin -d postgres -tc \"SELECT status FROM app_health WHERE status='roundtrip-probe'\" | grep -q roundtrip-probe"
+          docker compose -f pgsql.yml down -v
+
+          # MySQL
+          docker compose -f mysql.yml up -d
+          wait_healthy mysql.yml db 90
+          retry 24 "docker compose -f mysql.yml exec -T db mysqladmin ping -h localhost -u root -pchangeme-root"
+          docker compose -f mysql.yml down -v

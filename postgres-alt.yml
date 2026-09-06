@@ -1,26 +1,22 @@
+# Second Postgres stack on port 5433 (pgsql.yml uses 5432). Pick one.
+
 services:
-  postgresql-db:
+  postgresql:
     image: postgres:${POSTGRES_VERSION:-18}
-    container_name: psql
     restart: unless-stopped
     deploy:
       resources:
         limits:
           memory: 1g
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
-    networks:
-      - pgsql_network
+      - '${ALT_POSTGRES_PORT:-5433}:5432'
     volumes:
-      # NOTE: Postgres 18+ requires the mount at /var/lib/postgresql (parent);
-      # older majors then use the .../data subdir automatically.
-      - pgsql-data:/var/lib/postgresql
-      # Put *.sql / *.sh files in ./sql_scripts to seed the DB on first start.
-      - ./sql_scripts:/docker-entrypoint-initdb.d:ro
+      # Parent mount: required by Postgres 18+, older majors use .../data inside it.
+      - 'postgresql-data:/var/lib/postgresql'
+    environment:
+      - 'POSTGRES_USER=${POSTGRES_USER:-admin}'
+      - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}'
+      - 'POSTGRES_DB=${POSTGRES_DB:-postgres}'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-admin} -d $${POSTGRES_DB:-postgres}']
       interval: 10s
@@ -28,8 +24,8 @@ services:
       retries: 5
       start_period: 20s
 
-  # Web UI (opt-in): docker compose -f pgsql.yml --profile gui up -d
-  #   or: GUI=1 make up-pgsql  →  http://localhost:5050
+  # Web UI (opt-in): docker compose -f postgres-alt.yml --profile gui up -d
+  #   or: GUI=1 make up-postgres-alt  →  http://localhost:5050
   pgadmin:
     image: dpage/pgadmin4:${PGADMIN_VERSION:-9}
     profiles: ['gui']
@@ -41,10 +37,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme}
     volumes:
       - pgadmin-data:/var/lib/pgadmin
-    networks:
-      - pgsql_network
     depends_on:
-      postgresql-db:
+      postgresql:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'python -c "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen(''http://127.0.0.1:80/login'').status == 200 else 1)"']
@@ -53,12 +47,8 @@ services:
       retries: 5
       start_period: 60s
 
-networks:
-  pgsql_network:
-    driver: bridge
-
 volumes:
-  pgsql-data:
+  postgresql-data:
     driver: local
   pgadmin-data:
     driver: local

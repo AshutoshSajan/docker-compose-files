@@ -1,23 +1,56 @@
-version: '3.1'
 services:
   db:
-    image: mysql:5.7
+    image: mysql:${MYSQL_VERSION:-9}
     container_name: Mysqldb
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     ports:
-      - '3306:3306'
+      - '${MYSQL_PORT:-3306}:3306'
     environment:
-      MYSQL_DATABASE: mysql
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-appdb}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme-root}
+      # Prefer _FILE variants / Docker secrets in production:
       # MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
       # MYSQL_PASSWORD_FILE: /run/secrets/db_password
     # secrets:
     #   - db_root_password
     #   - db_password
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$${MYSQL_ROOT_PASSWORD:-changeme-root}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Web UI (opt-in): docker compose -f mysql.yml --profile gui up -d
+  #   or: GUI=1 make up-mysql  →  http://localhost:8081 (log in with MYSQL_USER)
+  phpmyadmin:
+    image: phpmyadmin:${PHPMYADMIN_VERSION:-5.2}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${PHPMYADMIN_PORT:-8081}:80'
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1/']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 # secrets:
 #   db_password:
 #     file: db_password.txt
@@ -25,4 +58,4 @@ services:
 #     file: db_root_password.txt
 
 volumes:
-  db_data:
+  mysql-data:

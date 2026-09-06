@@ -1,25 +1,63 @@
-version: "2"
-
 services:
   redis-master:
-    image: "bitnami/redis:latest"
+    image: 'redis:${REDIS_VERSION:-8}'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    command: redis-server --appendonly yes --requirepass ${REDIS_MASTER_PASSWORD:-changeme-master}
     ports:
-      - "6379"
-    environment:
-      - REDIS_REPLICATION_MODE=master
-      - REDIS_PASSWORD=my_master_password
+      - '${REDIS_MASTER_PORT:-6379}:6379'
     volumes:
-      - "/path/to/redis-persistence:/bitnami"
+      - 'redis-master-data:/data'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_MASTER_PASSWORD:-changeme-master}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis-replica:
-    image: "bitnami/redis:latest"
+    image: 'redis:${REDIS_VERSION:-8}'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    command: redis-server --appendonly yes --requirepass ${REDIS_REPLICA_PASSWORD:-changeme-replica} --masterauth ${REDIS_MASTER_PASSWORD:-changeme-master} --replicaof redis-master 6379
     ports:
-      - "6379"
+      - '${REDIS_REPLICA_PORT:-6380}:6379'
     depends_on:
-      - redis-master
+      redis-master:
+        condition: service_healthy
+    volumes:
+      - 'redis-replica-data:/data'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_REPLICA_PASSWORD:-changeme-replica}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # Web UI (opt-in): docker compose -f redis-master-replica.yml --profile gui up -d
+  #   or: GUI=1 make up-redis-master-replica  →  http://localhost:8084
+  redis-commander:
+    image: rediscommander/redis-commander:${REDIS_COMMANDER_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${REDIS_COMMANDER_PORT:-8084}:8081'
     environment:
-      - REDIS_REPLICATION_MODE=slave
-      - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PORT_NUMBER=6379
-      - REDIS_MASTER_PASSWORD=my_master_password
-      - REDIS_PASSWORD=my_replica_password
+      REDIS_HOSTS: master:redis-master:6379:0:${REDIS_MASTER_PASSWORD:-changeme-master},replica:redis-replica:6379:0:${REDIS_REPLICA_PASSWORD:-changeme-replica}
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica:
+        condition: service_healthy
+
+volumes:
+  redis-master-data:
+    driver: local
+  redis-replica-data:
+    driver: local

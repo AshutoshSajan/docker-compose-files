@@ -1,1 +1,6 @@
 dump/
+.env
+.env.*
+!.env.example
+data/
+*.tigerbeetle

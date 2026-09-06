@@ -1,22 +1,57 @@
-version: '3.2'
+# Single-broker Kafka with KRaft (no Zookeeper).
 services:
-  zookeeper:
-    image: wurstmeister/zookeeper
-    ports:
-      - "2181:2181"
   kafka:
-    image: wurstmeister/kafka:latest
+    image: apache/kafka:${KAFKA_VERSION:-4.3.1}
+    container_name: kafka
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports:
-      - target: 9094
-        published: 9094
-        protocol: tcp
-        mode: host
+      - '${KAFKA_PORT:-9094}:9094'
     environment:
-      HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094
-      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
-      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      # NOTE: the apache/kafka image ships no `cub` and keeps scripts in /opt/kafka/bin.
+      test: ['CMD-SHELL', '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Web UI (opt-in): docker compose -f kafka.yml --profile gui up -d
+  #   or: GUI=1 make up-kafka  →  http://localhost:8080
+  kafka-ui:
+    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${KAFKA_UI_PORT:-8080}:8080'
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    # No healthcheck: the kafka-ui image ships no shell/HTTP client.
+
+volumes:
+  kafka-data:
+    driver: local
+# Usage:
+#   docker compose -f kafka.yml up -d
+# Client bootstrap: localhost:9094

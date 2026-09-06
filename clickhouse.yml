@@ -1,0 +1,32 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:${CLICKHOUSE_VERSION:-26.3}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    ports:
+      - '${CLICKHOUSE_HTTP_PORT:-8123}:8123'
+      - '${CLICKHOUSE_NATIVE_PORT:-9000}:9000'
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-appdb}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-app}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+    volumes:
+      - 'clickhouse-data:/var/lib/clickhouse'
+    healthcheck:
+      test: ['CMD-SHELL', 'clickhouse-client --user $${CLICKHOUSE_USER:-app} --password $${CLICKHOUSE_PASSWORD:-changeme} --query "SELECT 1"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  # SQL playground UI is built in at :8123 (log in with CLICKHOUSE_USER).
+
+volumes:
+  clickhouse-data:
+    driver: local
