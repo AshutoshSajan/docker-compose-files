@@ -18,6 +18,27 @@ Validate without starting:
 docker compose -f <file>.yml config
 ```
 
+## Quick runner (Makefile)
+
+Any stack with one command — `<service>` is the file name without extension:
+
+```bash
+make help            # list actions + services
+make list            # list services only
+make up-redis        # docker compose -f redis.yml up -d
+make logs-pgsql      # follow logs (Ctrl-C to exit)
+make ps-kafka        # status for one stack
+make ps-all          # status for all stacks
+make down-mysql      # stop, keep volumes
+make clean-mongo     # stop AND delete volumes
+make restart-rabbit  # ❌ no — name must match: make restart-rabbitmq
+make pull-kafka      # pre-pull images
+make config-nginx    # validate + print resolved config
+```
+
+`.env` is auto-created from `.env.example` on first run.
+Per-invocation overrides work too: `REDIS_VERSION=7.4 make up-redis`.
+
 ## Switching versions
 
 Every image tag is a variable with a latest-stable default — no file editing needed:
