@@ -10,7 +10,7 @@
 
 services:
   format:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     profiles: ['format']
     network_mode: host
     volumes:
@@ -18,7 +18,7 @@ services:
     command: 'format --cluster=0 --replica=0 --replica-count=3 /data/0_0.tigerbeetle'
 
   format-1:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     profiles: ['format']
     network_mode: host
     volumes:
@@ -26,7 +26,7 @@ services:
     command: 'format --cluster=0 --replica=1 --replica-count=3 /data/0_1.tigerbeetle'
 
   format-2:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     profiles: ['format']
     network_mode: host
     volumes:
@@ -34,7 +34,7 @@ services:
     command: 'format --cluster=0 --replica=2 --replica-count=3 /data/0_2.tigerbeetle'
 
   tigerbeetle_0:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_0.tigerbeetle'
     network_mode: host
@@ -42,7 +42,7 @@ services:
       - ./data:/data
 
   tigerbeetle_1:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_1.tigerbeetle'
     network_mode: host
@@ -50,7 +50,7 @@ services:
       - ./data:/data
 
   tigerbeetle_2:
-    image: ghcr.io/tigerbeetle/tigerbeetle
+    image: ghcr.io/tigerbeetle/tigerbeetle:${TIGERBEETLE_VERSION:-latest}
     restart: unless-stopped
     command: 'start --addresses=0.0.0.0:3001,0.0.0.0:3002,0.0.0.0:3003 /data/0_2.tigerbeetle'
     network_mode: host

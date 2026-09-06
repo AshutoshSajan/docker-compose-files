@@ -3,7 +3,7 @@
 # Full observability stack (Reaper/Prometheus/Grafana) is available via profiles.
 services:
   cassandra:
-    image: cassandra:4.1
+    image: cassandra:${CASSANDRA_VERSION:-5.0}
     container_name: cassandra
     restart: unless-stopped
     environment:
@@ -27,7 +27,7 @@ services:
       start_period: 90s
 
   cqlsh:
-    image: cassandra:4.1
+    image: cassandra:${CASSANDRA_VERSION:-5.0}
     profiles: ['tools']
     entrypoint: cqlsh cassandra
     depends_on:
@@ -37,7 +37,7 @@ services:
       - ./cassandra-seeds:/seeds:ro
 
   nodetool:
-    image: cassandra:4.1
+    image: cassandra:${CASSANDRA_VERSION:-5.0}
     profiles: ['tools']
     entrypoint: ['nodetool', '-h', 'cassandra']
     command: ['status']
@@ -48,7 +48,7 @@ services:
   # Optional repair + metrics (modern versions, behind profiles):
   #   docker compose -f cassandra.yml --profile observability up -d
   cassandra-reaper:
-    image: thelastpickle/cassandra-reaper:3.6.0
+    image: thelastpickle/cassandra-reaper:${REAPER_VERSION:-3.6.0}
     profiles: ['observability']
     ports:
       - '8080:8080'
@@ -58,7 +58,7 @@ services:
         condition: service_healthy
 
   prometheus:
-    image: prom/prometheus:v2.52.0
+    image: prom/prometheus:${PROM_VERSION:-v3.14.0}
     profiles: ['observability']
     ports:
       - '9090:9090'
@@ -67,7 +67,7 @@ services:
       - prometheus-data:/prometheus
 
   grafana:
-    image: grafana/grafana:11.0.0
+    image: grafana/grafana:${GRAFANA_VERSION:-13.2}
     profiles: ['observability']
     ports:
       - '3000:3000'

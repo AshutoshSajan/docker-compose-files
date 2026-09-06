@@ -5,7 +5,7 @@
 
 services:
   postgresql:
-    image: postgres:16
+    image: postgres:${POSTGRES_VERSION:-18}
     restart: unless-stopped
     ports:
       - '${BITNAMI_POSTGRES_PORT:-5433}:5432'

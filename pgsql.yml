@@ -1,6 +1,6 @@
 services:
   postgresql-db:
-    image: postgres:16
+    image: postgres:${POSTGRES_VERSION:-18}
     container_name: psql
     restart: unless-stopped
     environment:

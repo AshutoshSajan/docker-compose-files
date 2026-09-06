@@ -4,7 +4,7 @@
 services:
   kafka-ui:
     container_name: kafka-ui
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION:-latest}
     restart: unless-stopped
     ports:
       - '${KAFKA_UI_PORT:-8080}:8080'
@@ -36,7 +36,7 @@ services:
       start_period: 60s
 
   zookeeper0:
-    image: confluentinc/cp-zookeeper:7.6.1
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -53,7 +53,7 @@ services:
       start_period: 20s
 
   kafka0:
-    image: confluentinc/cp-kafka:7.6.1
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     depends_on:
       zookeeper0:
@@ -80,7 +80,7 @@ services:
       start_period: 40s
 
   zookeeper1:
-    image: confluentinc/cp-zookeeper:7.6.1
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -95,7 +95,7 @@ services:
       start_period: 20s
 
   kafka1:
-    image: confluentinc/cp-kafka:7.6.1
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     depends_on:
       zookeeper1:
@@ -122,7 +122,7 @@ services:
       start_period: 40s
 
   schemaregistry0:
-    image: confluentinc/cp-schema-registry:7.6.1
+    image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     ports:
       - 8085:8085
@@ -143,7 +143,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
 
   schemaregistry1:
-    image: confluentinc/cp-schema-registry:7.6.1
+    image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     ports:
       - 18085:8085
@@ -164,7 +164,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
 
   kafka-connect0:
-    image: confluentinc/cp-kafka-connect:7.6.1
+    image: confluentinc/cp-kafka-connect:${CONFLUENT_VERSION:-7.9.9}
     restart: unless-stopped
     ports:
       - 8083:8083
@@ -192,7 +192,7 @@ services:
       CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
 
   kafka-init-topics:
-    image: confluentinc/cp-kafka:7.6.1
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.9.9}
     volumes:
       - ./kafka-seeds:/data:ro
     depends_on:

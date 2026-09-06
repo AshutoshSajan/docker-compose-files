@@ -18,26 +18,67 @@ Validate without starting:
 docker compose -f <file>.yml config
 ```
 
+## Switching versions
+
+Every image tag is a variable with a latest-stable default — no file editing needed:
+
+```bash
+cp .env.example .env   # then set versions per project
+```
+
+```dotenv
+POSTGRES_VERSION=17
+MONGO_VERSION=7.0
+REDIS_VERSION=7.4
+RABBITMQ_VERSION=4.2-management
+MYSQL_VERSION=8.4
+ES_VERSION=8.19.21
+CONFLUENT_VERSION=7.8.10
+KAFKA_VERSION=4.2.1
+CASSANDRA_VERSION=4.1
+NGINX_VERSION=1.28-alpine
+JULIA_VERSION=1.10
+```
+
+Full list: `POSTGRES_VERSION`, `MYSQL_VERSION`, `MONGO_VERSION`,
+`REDIS_VERSION`, `RABBITMQ_VERSION`, `KAFKA_VERSION`, `CONFLUENT_VERSION`,
+`KAFKA_UI_VERSION`, `ES_VERSION`, `CASSANDRA_VERSION`, `REAPER_VERSION`,
+`PROM_VERSION`, `GRAFANA_VERSION`, `TIGERBEETLE_VERSION`, `NGINX_VERSION`,
+`JULIA_VERSION` (see `.env.example`). One-off override without `.env`:
+
+```bash
+POSTGRES_VERSION=17 docker compose -f pgsql.yml up -d
+```
+
+Jenkins (`Dockerfile`) uses a build arg instead:
+
+```bash
+docker build --build-arg JENKINS_VERSION=2.555.3-lts-jdk21 .
+```
+
+> Major-version downgrades (e.g. Postgres 18 → 17) need a fresh volume:
+> `docker compose -f pgsql.yml down -v` before switching.
+
 ## Index
 
 | File | Service(s) | Default ports | Notes |
 |---|---|---|---|
-| `pgsql.yml` | Postgres 16 (official) | 5432 | `POSTGRES_*` in `.env`, seeds from `./sql_scripts`, healthcheck `pg_isready` |
-| `bitnami-postgres.yml` | Postgres 16 (official image; ex-Bitnami file) | 5433 | Alternative to `pgsql.yml`; pick one (port 5433 avoids clash) |
-| `mysql.yml` | MySQL 8.4 LTS | 3306 | Non-root `MYSQL_USER`, `mysqladmin ping` healthcheck |
-| `mongodb.yml` | MongoDB 7.0 | 27017 | Persistent `db-data` + root auth + `mongosh ping` |
-| `redis.yml` | Redis 7.4 (official) | 6379 | Password required by default, `FLUSHDB/FLUSHALL` disabled |
+| `pgsql.yml` | Postgres `${POSTGRES_VERSION:-18}` (official) | 5432 | `POSTGRES_*` in `.env`, seeds from `./sql_scripts`, healthcheck `pg_isready` |
+| `bitnami-postgres.yml` | Postgres `${POSTGRES_VERSION:-18}` (official image; ex-Bitnami file) | 5433 | Alternative to `pgsql.yml`; pick one (port 5433 avoids clash) |
+| `mysql.yml` | MySQL `${MYSQL_VERSION:-9}` LTS | 3306 | Non-root `MYSQL_USER`, `mysqladmin ping` healthcheck |
+| `mongodb.yml` | MongoDB `${MONGO_VERSION:-8}` | 27017 | Persistent `db-data` + root auth + `mongosh ping` |
+| `redis.yml` | Redis `${REDIS_VERSION:-8}` (official) | 6379 | Password required by default, `FLUSHDB/FLUSHALL` disabled |
 | `redis-master-replica.yml` | Redis master + replica | 6379, 6380 | Named volumes (no placeholder paths), replica waits for healthy master |
-| `rabbitmq.yml` | RabbitMQ 3.13 (official, mgmt) | 5672, 15672 | `RABBITMQ_*` in `.env`, `rabbitmq-diagnostics ping` |
-| `kafka.yml` | Kafka 3.8 KRaft (no ZK) | 9094 host | Replaces unmaintained `wurstmeister/*`; no `docker.sock` mount |
-| `zookeeper-kafka.yml` | Kafka 7.6 + Zookeeper | 9092 | Minimal Confluent example with `cub` healthchecks + volumes |
-| `kafka-gui.yml` | 2x Kafka + ZK + Schema Registry + Connect + kafka-ui | 8080, 9092-9093, 8083, 8085 | All Confluent images pinned to 7.6.1; seeds from `./kafka-seeds/message.json`; fixed duplicate broker id |
-| `elastic-search.yml` | ES 8.14 3-node | 9200 | Security disabled for local dev only; optional Kibana commented in-file |
-| `cassandra.yml` | Cassandra 4.1 | 9042 | Minimal working file; `cqlsh`/`nodetool` via `--profile tools`, Reaper/Prom/Grafana via `--profile observability` |
+| `rabbitmq.yml` | RabbitMQ `${RABBITMQ_VERSION:-4.3-management}` (official, mgmt) | 5672, 15672 | `RABBITMQ_*` in `.env`, `rabbitmq-diagnostics ping` |
+| `kafka.yml` | Kafka `${KAFKA_VERSION:-4.3.1}` KRaft (no ZK) | 9094 host | Replaces unmaintained `wurstmeister/*`; no `docker.sock` mount |
+| `zookeeper-kafka.yml` | Kafka + Zookeeper (Confluent `${CONFLUENT_VERSION:-7.9.9}`) | 9092 | Minimal Confluent example with `cub` healthchecks + volumes |
+| `kafka-gui.yml` | 2x Kafka + ZK + Schema Registry + Connect + kafka-ui | 8080, 9092-9093, 8083, 8085 | All Confluent images pinned to `${CONFLUENT_VERSION:-7.9.9}`; seeds from `./kafka-seeds/message.json`; fixed duplicate broker id |
+| `elastic-search.yml` | ES `${ES_VERSION:-9.5.3}` 3-node | 9200 | Security disabled for local dev only; optional Kibana commented in-file |
+| `cassandra.yml` | Cassandra `${CASSANDRA_VERSION:-5.0}` | 9042 | Minimal working file; `cqlsh`/`nodetool` via `--profile tools`, Reaper/Prom/Grafana via `--profile observability` |
 | `tigerbeetle.yaml` | TigerBeetle 3-node (host net, Linux) | 3001-3003 | Run `--profile format` once before `up` |
-| `nginx.yml` | Nginx 1.27-alpine | 80, 443 | Example `./nginx/{html,conf.d}` mounts commented in-file |
-| `julia.yml` | Julia 1.10 REPL | 7777 | Workdir `/work` mounted from `./julia-work` |
-| `Dockerfile` | Jenkins LTS JDK17 + docker-cli | — | Blue Ocean removed (deprecated); cleaned apt layers |
+| `nginx.yml` | Nginx `${NGINX_VERSION:-1.30-alpine}` (stable) | 80, 443 | Example `./nginx/{html,conf.d}` mounts commented in-file |
+| `julia.yml` | Julia `${JULIA_VERSION:-1.12}` REPL | 7777 | Workdir `/work` mounted from `./julia-work` |
+| `Dockerfile` | Jenkins `${JENKINS_VERSION:-2.555.3-lts-jdk21}` + docker-cli | — | Blue Ocean removed (deprecated); cleaned apt layers |
 
 Renamed: `rabitmq.yml` → `rabbitmq.yml`.
 

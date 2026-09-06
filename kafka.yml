@@ -3,7 +3,7 @@
 # insecure /var/run/docker.sock mount.
 services:
   kafka:
-    image: apache/kafka:3.8.0
+    image: apache/kafka:${KAFKA_VERSION:-4.3.1}
     container_name: kafka
     restart: unless-stopped
     ports:
@@ -24,7 +24,8 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ['CMD-SHELL', 'cub kafka-ready -b localhost:9092 1 10']
+      # NOTE: the apache/kafka image ships no `cub` and keeps scripts in /opt/kafka/bin.
+      test: ['CMD-SHELL', '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list']
       interval: 15s
       timeout: 10s
       retries: 5

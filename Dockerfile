@@ -1,4 +1,6 @@
-FROM jenkins/jenkins:2.462.3-lts-jdk17
+# Overridable at build time: docker build --build-arg JENKINS_VERSION=<tag> .
+ARG JENKINS_VERSION=2.555.3-lts-jdk21
+FROM jenkins/jenkins:${JENKINS_VERSION}
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends lsb-release ca-certificates curl gnupg \
   && curl -fsSL https://download.docker.com/linux/debian/gpg -o /usr/share/keyrings/docker-archive-keyring.asc \

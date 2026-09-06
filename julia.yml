@@ -1,6 +1,6 @@
 services:
   julia-docker:
-    image: julia:1.10
+    image: julia:${JULIA_VERSION:-1.12}
     working_dir: /work
     stdin_open: true
     tty: true

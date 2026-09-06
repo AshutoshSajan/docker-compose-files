@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: mongo:7.0
+    image: mongo:${MONGO_VERSION:-8}
     restart: unless-stopped
     ports:
       - '${MONGO_PORT:-27017}:27017'

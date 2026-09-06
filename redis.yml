@@ -2,7 +2,7 @@ services:
   redis:
     # NOTE: bitnami/redis community tags were removed from Docker Hub;
     # this file now uses the official image.
-    image: 'redis:7.4'
+    image: 'redis:${REDIS_VERSION:-8}'
     restart: always
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme} --rename-command FLUSHDB "" --rename-command FLUSHALL ""
     ports:
