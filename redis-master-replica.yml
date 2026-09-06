@@ -34,6 +34,22 @@ services:
       retries: 5
       start_period: 15s
 
+  # Web UI (opt-in): docker compose -f redis-master-replica.yml --profile gui up -d
+  #   or: GUI=1 make up-redis-master-replica  →  http://localhost:8084
+  redis-commander:
+    image: rediscommander/redis-commander:${REDIS_COMMANDER_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${REDIS_COMMANDER_PORT:-8084}:8081'
+    environment:
+      REDIS_HOSTS: master:redis-master:6379:0:${REDIS_MASTER_PASSWORD:-changeme-master},replica:redis-replica:6379:0:${REDIS_REPLICA_PASSWORD:-changeme-replica}
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica:
+        condition: service_healthy
+
 volumes:
   redis-master-data:
     driver: local

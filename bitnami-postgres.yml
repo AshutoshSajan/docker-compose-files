@@ -1,7 +1,7 @@
-# Alternative Postgres 16 stack (originally Bitnami-based).
+# Alternative Postgres stack (originally Bitnami-based).
 # NOTE: bitnami/postgresql community tags were removed from Docker Hub,
-# so this file now uses the official postgres:16 image with the same
-# service/volume names. Default port 5433 avoids clashing with pgsql.yml.
+# so this file now uses the official postgres image (see POSTGRES_VERSION)
+# with the same service/volume names. Default port 5433 avoids clashing with pgsql.yml.
 
 services:
   postgresql:
@@ -22,6 +22,25 @@ services:
       retries: 5
       start_period: 20s
 
+  # Web UI (opt-in): docker compose -f bitnami-postgres.yml --profile gui up -d
+  #   or: GUI=1 make up-bitnami-postgres  →  http://localhost:5050
+  pgadmin:
+    image: dpage/pgadmin4:${PGADMIN_VERSION:-9}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${PGADMIN_PORT:-5050}:80'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
 volumes:
   postgresql_data:
+    driver: local
+  pgadmin-data:
     driver: local

@@ -45,13 +45,14 @@ services:
       cassandra:
         condition: service_healthy
 
-  # Optional repair + metrics (modern versions, behind profiles):
+  # Optional repair + metrics (Reaper UI :8080, Grafana :3000), behind profiles:
   #   docker compose -f cassandra.yml --profile observability up -d
+  #   GUI=1 make up-cassandra   (same stack via the 'gui' profile)
   cassandra-reaper:
     image: thelastpickle/cassandra-reaper:${REAPER_VERSION:-3.6.0}
-    profiles: ['observability']
+    profiles: ['observability', 'gui']
     ports:
-      - '8080:8080'
+      - '${REAPER_PORT:-8080}:8080'
       - '8081:8081'
     depends_on:
       cassandra:
@@ -59,7 +60,7 @@ services:
 
   prometheus:
     image: prom/prometheus:${PROM_VERSION:-v3.14.0}
-    profiles: ['observability']
+    profiles: ['observability', 'gui']
     ports:
       - '9090:9090'
     volumes:
@@ -68,7 +69,7 @@ services:
 
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-13.2}
-    profiles: ['observability']
+    profiles: ['observability', 'gui']
     ports:
       - '3000:3000'
     restart: unless-stopped

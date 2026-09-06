@@ -9,7 +9,11 @@ SERVICES := bitnami-postgres cassandra elastic-search julia kafka kafka-gui \
 # Single-line helper (must stay on one line: each recipe line is its own shell).
 # Resolves "<name>.yml" or "<name>.yaml", ensures .env exists, then runs
 # "docker compose -f <file>" with whatever command follows $(RUN).
-RUN = [ -f .env ] || { cp .env.example .env; echo "Created .env from .env.example - edit it to switch versions/passwords."; }; f="$*.yml"; [ -f "$$f" ] || f="$*.yaml"; [ -f "$$f" ] || { echo "Unknown service '$*'. Try: make list"; exit 1; }; docker compose -f "$$f"
+# Prefix with GUI=1 to include the opt-in 'gui' profile (web UIs).
+RUN = [ -f .env ] || { cp .env.example .env; echo "Created .env from .env.example - edit it to switch versions/passwords."; }; f="$*.yml"; [ -f "$$f" ] || f="$*.yaml"; [ -f "$$f" ] || { echo "Unknown service '$*'. Try: make list"; exit 1; }; docker compose $${GUI:+--profile gui} -f "$$f"
+# Same, but always covering the gui profile: stop/clean/inspect act on the
+# whole stack so GUI containers are never left orphaned.
+RUN_ALL = [ -f .env ] || { cp .env.example .env; echo "Created .env from .env.example - edit it to switch versions/passwords."; }; f="$*.yml"; [ -f "$$f" ] || f="$*.yaml"; [ -f "$$f" ] || { echo "Unknown service '$*'. Try: make list"; exit 1; }; docker compose --profile gui -f "$$f"
 
 .DEFAULT_GOAL := help
 
@@ -24,6 +28,8 @@ help: ## Show this help
 	@grep -E '^(list|ps-all|help):.*?##' $(MAKEFILE_LIST) | sed -e 's/:.*?##/: /' -e 's/: ## /: /' -e 's/## //' -e 's/^/  /'
 	@echo ""
 	@echo "Services: $(SERVICES)"
+	@echo ""
+	@echo "Web UIs (opt-in gui profile): GUI=1 make up-redis  (see README)"
 
 .PHONY: list
 list: ## List available services
@@ -39,23 +45,23 @@ ps-all: ## Show running containers for all stacks
 up-%: ## Start a service detached: make up-redis
 	@$(RUN) up -d
 
-down-%: ## Stop a service (keep volumes): make down-redis
-	@$(RUN) down
+down-%: ## Stop a service (keep volumes, incl. GUI): make down-redis
+	@$(RUN_ALL) down
 
 clean-%: ## Stop a service AND delete its volumes: make clean-redis
-	@$(RUN) down -v
+	@$(RUN_ALL) down -v
 
-restart-%: ## Restart a service: make restart-pgsql
-	@$(RUN) restart
+restart-%: ## Restart a service (incl. GUI): make restart-pgsql
+	@$(RUN_ALL) restart
 
-pull-%: ## Pull image(s) for a service: make pull-kafka
-	@$(RUN) pull
+pull-%: ## Pull image(s) for a service (incl. GUI): make pull-kafka
+	@$(RUN_ALL) pull
 
-logs-%: ## Follow logs: make logs-mysql (Ctrl-C to exit)
-	@$(RUN) logs -f --tail=100
+logs-%: ## Follow logs (incl. GUI): make logs-mysql (Ctrl-C to exit)
+	@$(RUN_ALL) logs -f --tail=100
 
-ps-%: ## Show containers for a service: make ps-redis
-	@$(RUN) ps
+ps-%: ## Show containers for a service (incl. GUI): make ps-redis
+	@$(RUN_ALL) ps
 
 config-%: ## Validate + print resolved config: make config-pgsql
 	@$(RUN) config

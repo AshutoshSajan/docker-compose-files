@@ -16,6 +16,20 @@ services:
       retries: 5
       start_period: 10s
 
+  # Web UI (opt-in): docker compose -f redis.yml --profile gui up -d
+  #   or: GUI=1 make up-redis  →  http://localhost:8084
+  redis-commander:
+    image: rediscommander/redis-commander:${REDIS_COMMANDER_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${REDIS_COMMANDER_PORT:-8084}:8081'
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-changeme}
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   redis_data:
     driver: local

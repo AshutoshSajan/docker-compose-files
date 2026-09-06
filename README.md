@@ -39,6 +39,36 @@ make config-nginx    # validate + print resolved config
 `.env` is auto-created from `.env.example` on first run.
 Per-invocation overrides work too: `REDIS_VERSION=7.4 make up-redis`.
 
+## Web GUIs for every tool
+
+GUI sidecars are opt-in behind the `gui` profile — plain `make up-<svc>`
+stays minimal. Prefix with `GUI=1` to include the web UI:
+
+```bash
+GUI=1 make up-redis        # Redis + redis-commander  → http://localhost:8084
+GUI=1 make up-pgsql        # Postgres + pgAdmin       → http://localhost:5050
+GUI=1 make up-kafka        # Kafka + kafka-ui         → http://localhost:8080
+```
+
+Raw compose equivalent: `docker compose -f redis.yml --profile gui up -d`.
+
+| Stack | GUI | Default URL | Login |
+|---|---|---|---|
+| `pgsql.yml` / `bitnami-postgres.yml` | pgAdmin 4 | :5050 | `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` |
+| `mysql.yml` | phpMyAdmin | :8081 | MySQL user from `.env` |
+| `mongodb.yml` | mongo-express | :8082 | `MONGO_EXPRESS_USER` / `MONGO_EXPRESS_PASSWORD` |
+| `redis.yml` / `redis-master-replica.yml` | redis-commander | :8084 | no login (local dev) |
+| `rabbitmq.yml` | Management UI (built in) | :15672 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` |
+| `kafka.yml` / `zookeeper-kafka.yml` | kafka-ui | :8080 | no login |
+| `kafka-gui.yml` | kafka-ui (always on) | :8080 | no login |
+| `elastic-search.yml` | Kibana | :5601 | no login (security disabled, dev only) |
+| `cassandra.yml` | Reaper + Grafana + Prometheus | :8080 / :3000 / :9090 | `GRAFANA_USER` / `GRAFANA_PASSWORD` |
+| Jenkins (`Dockerfile`) | Jenkins itself | :8080 | set on first boot |
+
+No GUI: `nginx` (is itself a web server), `julia` (REPL), `tigerbeetle`
+(no official web UI). GUI image versions/ports are `.env` vars
+(`PGADMIN_VERSION`, `PHPMYADMIN_PORT`, …).
+
 ## Switching versions
 
 Every image tag is a variable with a latest-stable default — no file editing needed:

@@ -44,6 +44,22 @@ services:
       retries: 5
       start_period: 40s
 
+  # Web UI (opt-in): docker compose -f zookeeper-kafka.yml --profile gui up -d
+  #   or: GUI=1 make up-zookeeper-kafka  →  http://localhost:8080
+  kafka-ui:
+    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION:-latest}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${KAFKA_UI_PORT:-8080}:8080'
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      broker:
+        condition: service_healthy
+
 volumes:
   zookeeper-data:
   zookeeper-logs:

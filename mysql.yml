@@ -26,6 +26,21 @@ services:
       retries: 5
       start_period: 30s
 
+  # Web UI (opt-in): docker compose -f mysql.yml --profile gui up -d
+  #   or: GUI=1 make up-mysql  →  http://localhost:8081 (log in with MYSQL_USER)
+  phpmyadmin:
+    image: phpmyadmin:${PHPMYADMIN_VERSION:-5.2}
+    profiles: ['gui']
+    restart: unless-stopped
+    ports:
+      - '${PHPMYADMIN_PORT:-8081}:80'
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      db:
+        condition: service_healthy
+
 # secrets:
 #   db_password:
 #     file: db_password.txt
